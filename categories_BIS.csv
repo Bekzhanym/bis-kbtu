@@ -1,0 +1,4 @@
+category_id,category_name,description,is_active
+1,Food,"Groceries, supermarkets, and dining out",t
+2,Transport,"Public transit, fuel, and taxi fares",t
+3,Entertainment,"Movies, games, and leisure activities",t
