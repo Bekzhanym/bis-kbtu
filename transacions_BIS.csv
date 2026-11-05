@@ -1,0 +1,4 @@
+transaction_id,user_id,category_id,amount,transaction_date,note
+101,1,1,65000.00,2026-10-03,Supermarket grocery shopping
+102,2,1,45000.00,2026-10-10,Family restaurant dinner
+103,1,2,18000.00,2026-10-12,Monthly transport pass and fuel
