@@ -6,6 +6,7 @@ TX = {"category_id": 1, "amount": "1500.50", "transaction_date": "2026-10-21", "
 # ---------- auth ----------
 def test_requires_auth(client):
     assert client.get("/api/transactions").status_code == 401
+    assert client.get("/api/reports/monthly?month=2026-10-01").status_code == 401
 
 
 def test_register_login_and_profile(client):
@@ -117,3 +118,11 @@ def test_inactive_category_blocks_new_expenses(client, admin, member):
     client.patch("/api/categories/3", json={"is_active": False}, headers=admin)
     assert client.post("/api/transactions", json={**TX, "category_id": 3}, headers=member).status_code == 400
 
+
+# ---------- monthly report ----------
+def test_monthly_report(client, member):
+    r = client.get("/api/reports/monthly?month=2026-10-15", headers=member).json()
+    food = next(c for c in r["categories"] if c["category_name"] == "Food")
+    assert food["spent"] == "110000.00" and food["over_limit"] is True and food["remaining"] == "-10000.00"
+    assert r["total_spent"] == "128000.00" and r["my_spent"] == "45000.00"
+    assert "email" not in str(r) and "note" not in str(r)
