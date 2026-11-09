@@ -14,6 +14,11 @@ from .seed import seed
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    # create_all() skips tables that already exist, so indexes added later
+    # would never reach an old database file. Create the missing ones here.
+    for table in Base.metadata.sorted_tables:
+        for index in table.indexes:
+            index.create(bind=engine, checkfirst=True)
     with SessionLocal() as db:
         seed(db)
     yield

@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Numeric, String, UniqueConstraint, func,
+    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String, UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,7 +41,16 @@ class Category(Base):
 
 class Transaction(Base):
     __tablename__ = "transactions"
-    __table_args__ = (CheckConstraint("amount > 0", name="ck_transactions_amount"),)
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_transactions_amount"),
+        # Indexes for the most frequent queries:
+        # "my expenses for a month" (filter by user_id + date range)
+        Index("ix_transactions_user_date", "user_id", "transaction_date"),
+        # monthly report: date range for the whole family, grouped by category
+        Index("ix_transactions_date_category", "transaction_date", "category_id"),
+        # category filter + FK lookups when a category is checked before deletion
+        Index("ix_transactions_category", "category_id"),
+    )
 
     transaction_id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", **FK), nullable=False)
@@ -59,6 +68,8 @@ class Budget(Base):
     __table_args__ = (
         UniqueConstraint("category_id", "month_start", name="uq_budgets_category_month"),
         CheckConstraint("monthly_limit > 0", name="ck_budgets_limit"),
+        # report and admin page load all limits of one month
+        Index("ix_budgets_month", "month_start"),
     )
 
     budget_id: Mapped[int] = mapped_column(primary_key=True)

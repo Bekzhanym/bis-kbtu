@@ -5,6 +5,13 @@ services:
       SECRET_KEY: ${SECRET_KEY:-please-set-a-long-random-secret-key-in-env}
     volumes:
       - db-data:/data-volume
+    # Server is "healthy" only when the API answers /api/health
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   frontend:
@@ -12,7 +19,8 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

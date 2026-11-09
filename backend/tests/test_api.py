@@ -126,3 +126,19 @@ def test_monthly_report(client, member):
     assert food["spent"] == "110000.00" and food["over_limit"] is True and food["remaining"] == "-10000.00"
     assert r["total_spent"] == "128000.00" and r["my_spent"] == "45000.00"
     assert "email" not in str(r) and "note" not in str(r)
+
+
+# ---------- database indexes (24B031914) ----------
+def test_indexes_exist_and_are_used(client):
+    from sqlalchemy import inspect, text
+
+    from app.database import engine
+    names = {i["name"] for i in inspect(engine).get_indexes("transactions")}
+    assert {"ix_transactions_user_date", "ix_transactions_date_category", "ix_transactions_category"} <= names
+    assert "ix_budgets_month" in {i["name"] for i in inspect(engine).get_indexes("budgets")}
+    with engine.connect() as conn:
+        plan = " ".join(str(r) for r in conn.execute(text(
+            "EXPLAIN QUERY PLAN SELECT * FROM transactions "
+            "WHERE user_id = 2 AND transaction_date >= '2026-10-01' AND transaction_date < '2026-11-01'")))
+    assert "ix_transactions_user_date" in plan
+
