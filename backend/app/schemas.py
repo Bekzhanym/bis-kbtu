@@ -46,8 +46,13 @@ class UserOut(ORM):
 
 class TokenOut(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class RefreshIn(BaseModel):
+    refresh_token: str
 
 
 class ProfileUpdate(BaseModel):
@@ -159,3 +164,4 @@ class MonthlyReport(BaseModel):
     my_spent: Decimal
     categories: list[CategoryReport]
     members: list[MemberReport]
+

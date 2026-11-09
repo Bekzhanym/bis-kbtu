@@ -3,16 +3,30 @@ import type {
 } from './types'
 
 const TOKEN_KEY = 'fbt_token'
+const REFRESH_KEY = 'fbt_refresh'
 
+function read(key: string): string | null {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+function write(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, value)
+  } catch { /* storage unavailable */ }
+}
+
+// access token: short-lived, sent with every request
+// refresh token: long-lived, used only to get a new access token
 export const tokenStore = {
-  get(): string | null {
-    try { return localStorage.getItem(TOKEN_KEY) } catch { return null }
-  },
-  set(token: string) {
-    try { localStorage.setItem(TOKEN_KEY, token) } catch { /* storage unavailable */ }
+  get: () => read(TOKEN_KEY),
+  getRefresh: () => read(REFRESH_KEY),
+  set(access: string, refresh?: string) {
+    write(TOKEN_KEY, access)
+    if (refresh) write(REFRESH_KEY, refresh)
   },
   clear() {
-    try { localStorage.removeItem(TOKEN_KEY) } catch { /* storage unavailable */ }
+    write(TOKEN_KEY, null)
+    write(REFRESH_KEY, null)
   },
 }
 
@@ -38,6 +52,7 @@ const MESSAGES: Record<string, string> = {
   'Only admins can see all family expenses': 'Все расходы семьи видит только администратор',
   'The household must keep at least one admin': 'В семье должен остаться хотя бы один администратор',
   'Database constraint violated': 'Данные нарушают ограничения базы данных',
+  'Invalid refresh token': 'Сессия истекла, войдите снова',
 }
 
 function messageFrom(detail: unknown, fallback: string): string {
@@ -50,7 +65,30 @@ function messageFrom(detail: unknown, fallback: string): string {
 
 type Options = { method?: string; body?: unknown; query?: Record<string, string | number | undefined | null> }
 
-async function request<T>(path: string, { method = 'GET', body, query }: Options = {}): Promise<T> {
+// One refresh at a time: if several requests get 401 together, they all wait for the same call
+let refreshing: Promise<boolean> | null = null
+
+function refreshTokens(): Promise<boolean> {
+  const refresh = tokenStore.getRefresh()
+  if (!refresh) return Promise.resolve(false)
+  refreshing ??= fetch('/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refresh }),
+  })
+    .then(async (res) => {
+      if (!res.ok) return false
+      const data = (await res.json()) as TokenResponse
+      tokenStore.set(data.access_token, data.refresh_token)
+      return true
+    })
+    .catch(() => false)
+    .finally(() => { refreshing = null })
+  return refreshing
+}
+
+async function request<T>(path: string, opts: Options = {}, retried = false): Promise<T> {
+  const { method = 'GET', body, query } = opts
   const params = new URLSearchParams()
   for (const [k, v] of Object.entries(query ?? {})) {
     if (v !== undefined && v !== null && v !== '') params.set(k, String(v))
@@ -69,6 +107,8 @@ async function request<T>(path: string, { method = 'GET', body, query }: Options
   }
 
   if (res.status === 401 && token) {
+    // Access token expired: get a new one with the refresh token and repeat the request once
+    if (!retried && await refreshTokens()) return request<T>(path, opts, true)
     tokenStore.clear()
     window.dispatchEvent(new Event('auth:logout'))
   }
@@ -91,7 +131,7 @@ export const api = {
   updateMe: (data: { full_name?: string; email?: string }) =>
     request<User>('/api/auth/me', { method: 'PATCH', body: data }),
   changePassword: (current_password: string, new_password: string) =>
-    request<void>('/api/auth/change-password', { method: 'POST', body: { current_password, new_password } }),
+    request<TokenResponse>('/api/auth/change-password', { method: 'POST', body: { current_password, new_password } }),
 
   // users (admin)
   users: () => request<User[]>('/api/users'),

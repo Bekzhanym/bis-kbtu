@@ -22,7 +22,7 @@ def test_register_login_and_profile(client):
     assert r.status_code == 400
     r = client.post("/api/auth/change-password", json={"current_password": "secret123", "new_password": "newpass123"},
                     headers=h)
-    assert r.status_code == 204
+    assert r.status_code == 200 and r.json()["refresh_token"]
     login(client, "new@mail.com", "newpass123")
 
 
@@ -126,6 +126,45 @@ def test_monthly_report(client, member):
     assert food["spent"] == "110000.00" and food["over_limit"] is True and food["remaining"] == "-10000.00"
     assert r["total_spent"] == "128000.00" and r["my_spent"] == "45000.00"
     assert "email" not in str(r) and "note" not in str(r)
+
+
+# ---------- access / refresh tokens (24B032028) ----------
+def _tokens(client, email="dana.m@example.com", password="demo12345"):
+    return client.post("/api/auth/login", json={"email": email, "password": password}).json()
+
+
+def test_refresh_gives_new_working_tokens(client):
+    t = _tokens(client)
+    r = client.post("/api/auth/refresh", json={"refresh_token": t["refresh_token"]})
+    assert r.status_code == 200
+    new = r.json()
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer {new['access_token']}"}).status_code == 200
+
+
+def test_token_types_are_not_interchangeable(client):
+    t = _tokens(client)
+    # refresh token cannot call the API, access token cannot refresh
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer {t['refresh_token']}"}).status_code == 401
+    assert client.post("/api/auth/refresh", json={"refresh_token": t["access_token"]}).status_code == 401
+    assert client.post("/api/auth/refresh", json={"refresh_token": "garbage"}).status_code == 401
+
+
+def test_password_change_revokes_old_refresh_tokens(client):
+    old = _tokens(client)
+    h = {"Authorization": f"Bearer {old['access_token']}"}
+    r = client.post("/api/auth/change-password",
+                    json={"current_password": "demo12345", "new_password": "newpass123"}, headers=h)
+    assert r.status_code == 200
+    assert client.post("/api/auth/refresh", json={"refresh_token": old["refresh_token"]}).status_code == 401
+    assert client.post("/api/auth/refresh", json={"refresh_token": r.json()["refresh_token"]}).status_code == 200
+
+
+def test_expired_access_token_is_rejected(client):
+    from datetime import timedelta
+
+    from app.core.security import _encode
+    expired = _encode(2, "access", timedelta(seconds=-5))
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer {expired}"}).status_code == 401
 
 
 # ---------- database indexes (24B031914) ----------

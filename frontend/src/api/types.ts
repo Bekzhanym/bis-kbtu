@@ -1,7 +1,7 @@
 export type Role = 'admin' | 'member'
 
 export type User = { user_id: number; full_name: string; email: string; role: Role }
-export type TokenResponse = { access_token: string; token_type: string; user: User }
+export type TokenResponse = { access_token: string; refresh_token: string; token_type: string; user: User }
 
 export type Category = {
   category_id: number

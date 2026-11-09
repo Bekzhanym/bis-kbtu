@@ -3,6 +3,8 @@ services:
     build: ./backend
     environment:
       SECRET_KEY: ${SECRET_KEY:-please-set-a-long-random-secret-key-in-env}
+      ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-15}
+      REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:-7}
     volumes:
       - db-data:/data-volume
     # Server is "healthy" only when the API answers /api/health

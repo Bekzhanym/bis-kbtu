@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { api } from '../api/client'
+import { api, tokenStore } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, Field } from '../components/Field'
 import { hasErrors, validatePasswordChange, validateProfile, type Errors } from '../lib/validation'
@@ -39,9 +39,11 @@ export function ProfilePage() {
     setWErrors(errs)
     if (hasErrors(errs)) return
     try {
-      await api.changePassword(pwd.current, pwd.next)
+      // Old sessions on other devices are logged out; this one gets new tokens
+      const res = await api.changePassword(pwd.current, pwd.next)
+      tokenStore.set(res.access_token, res.refresh_token)
       setPwd({ current: '', next: '', confirm: '' })
-      setWMsg({ kind: 'success', text: 'Пароль изменён' })
+      setWMsg({ kind: 'success', text: 'Пароль изменён. На других устройствах нужно войти заново.' })
     } catch (err) {
       setWMsg({ kind: 'error', text: (err as Error).message })
     }
