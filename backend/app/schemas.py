@@ -165,3 +165,21 @@ class MonthlyReport(BaseModel):
     categories: list[CategoryReport]
     members: list[MemberReport]
 
+
+class CategoryCompare(BaseModel):
+    category_id: int
+    category_name: str
+    spent: Decimal
+    prev_spent: Decimal
+    diff: Decimal
+    diff_pct: float | None  # None when the previous month had 0
+
+
+class MonthCompare(BaseModel):
+    month_start: date
+    prev_month_start: date
+    total_spent: Decimal
+    prev_total_spent: Decimal
+    diff: Decimal
+    diff_pct: float | None
+    categories: list[CategoryCompare]

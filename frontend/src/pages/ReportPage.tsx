@@ -1,14 +1,17 @@
 import { api } from '../api/client'
 import { Alert, ProgressPanel } from '../components/Field'
 import { MonthPicker } from '../components/MonthPicker'
-import { kzt, monthStart } from '../lib/format'
+import { kzt, monthLabel, monthStart } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
 import { useMonth } from '../lib/useMonth'
 
 export function ReportPage() {
   const [month, setMonth] = useMonth()
   const report = useLoad(() => api.monthlyReport(monthStart(month)), [month])
+  const compare = useLoad(() => api.compareMonths(monthStart(month)), [month])
   const r = report.data
+  const cmp = compare.data
+  const prevLabel = cmp ? monthLabel(cmp.prev_month_start.slice(0, 7)) : ''
 
   return (
     <>
@@ -57,6 +60,38 @@ export function ReportPage() {
           </section>
 
           <section className="section">
+            <h2>Сравнение с прошлым месяцем</h2>
+            {compare.error && <Alert>{compare.error}</Alert>}
+            {cmp && (cmp.categories.length === 0 ? <p className="muted">Нет расходов ни в этом, ни в прошлом месяце.</p> : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Категория</th><th className="num">{prevLabel}</th><th className="num">{monthLabel(month)}</th><th className="num">Изменение</th></tr>
+                  </thead>
+                  <tbody>
+                    {cmp.categories.map((c) => (
+                      <tr key={c.category_id}>
+                        <td>{c.category_name}</td>
+                        <td className="num">{kzt(c.prev_spent)}</td>
+                        <td className="num">{kzt(c.spent)}</td>
+                        <td className="num"><Diff diff={c.diff} pct={c.diff_pct} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Всего</td>
+                      <td className="num">{kzt(cmp.prev_total_spent)}</td>
+                      <td className="num">{kzt(cmp.total_spent)}</td>
+                      <td className="num"><Diff diff={cmp.diff} pct={cmp.diff_pct} /></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ))}
+          </section>
+
+          <section className="section">
             <h2>По членам семьи</h2>
             {r.members.length === 0 ? <p className="muted">В этом месяце расходов нет.</p> : (
               <ul className="list">
@@ -79,5 +114,17 @@ export function ReportPage() {
         </div>
       )}
     </>
+  )
+}
+
+/** Spending went up -> red, down -> green. */
+function Diff({ diff, pct }: { diff: string; pct: number | null }) {
+  const n = Number(diff)
+  if (n === 0) return <span className="muted">без изменений</span>
+  const sign = n > 0 ? '+' : '−'
+  return (
+    <span className={n > 0 ? 'diff-up' : 'diff-down'}>
+      {sign}{kzt(Math.abs(n))}{pct !== null && ` (${sign}${Math.abs(pct)}%)`}
+    </span>
   )
 }

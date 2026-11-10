@@ -128,6 +128,27 @@ def test_monthly_report(client, member):
     assert "email" not in str(r) and "note" not in str(r)
 
 
+# ---------- month comparison (24B032010) ----------
+def test_compare_with_previous_month(client, member):
+    sept = {**TX, "amount": "50000.00", "transaction_date": "2026-09-12"}
+    assert client.post("/api/transactions", json=sept, headers=member).status_code == 201
+    r = client.get("/api/reports/compare?month=2026-10-01", headers=member).json()
+    assert r["prev_month_start"] == "2026-09-01"
+    assert r["total_spent"] == "128000.00" and r["prev_total_spent"] == "50000.00"
+    assert r["diff"] == "78000.00" and r["diff_pct"] == 156.0
+    food = next(c for c in r["categories"] if c["category_name"] == "Food")
+    assert food["spent"] == "110000.00" and food["prev_spent"] == "50000.00" and food["diff_pct"] == 120.0
+    other = [c for c in r["categories"] if c["category_name"] != "Food"]
+    assert all(c["prev_spent"] == "0" or c["diff_pct"] is None for c in other)
+    assert "email" not in str(r) and "note" not in str(r) and "full_name" not in str(r)
+
+
+def test_compare_with_explicit_month_and_auth(client, member):
+    assert client.get("/api/reports/compare?month=2026-10-01").status_code == 401
+    r = client.get("/api/reports/compare?month=2026-10-01&with=2025-01-01", headers=member).json()
+    assert r["prev_month_start"] == "2025-01-01" and r["diff_pct"] is None
+
+
 # ---------- access / refresh tokens (24B032028) ----------
 def _tokens(client, email="dana.m@example.com", password="demo12345"):
     return client.post("/api/auth/login", json={"email": email, "password": password}).json()

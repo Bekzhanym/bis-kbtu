@@ -1,5 +1,5 @@
 import type {
-  Budget, Category, MonthlyReport, Role, TokenResponse, Transaction, TransactionInput, User,
+  Budget, Category, MonthCompare, MonthlyReport, Role, TokenResponse, Transaction, TransactionInput, User,
 } from './types'
 
 const TOKEN_KEY = 'fbt_token'
@@ -165,4 +165,6 @@ export const api = {
 
   // reports
   monthlyReport: (month: string) => request<MonthlyReport>('/api/reports/monthly', { query: { month } }),
+  compareMonths: (month: string, withMonth?: string) =>
+    request<MonthCompare>('/api/reports/compare', { query: { month, with: withMonth } }),
 }

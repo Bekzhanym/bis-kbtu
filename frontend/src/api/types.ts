@@ -54,3 +54,22 @@ export type MonthlyReport = {
   categories: CategoryReport[]
   members: { user_id: number; full_name: string; spent: string }[]
 }
+
+export type CategoryCompare = {
+  category_id: number
+  category_name: string
+  spent: string
+  prev_spent: string
+  diff: string
+  diff_pct: number | null
+}
+
+export type MonthCompare = {
+  month_start: string
+  prev_month_start: string
+  total_spent: string
+  prev_total_spent: string
+  diff: string
+  diff_pct: number | null
+  categories: CategoryCompare[]
+}
