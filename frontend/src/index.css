@@ -216,3 +216,21 @@ tfoot td { font-weight: 700; border-bottom: 0; background: var(--grey); }
 }
 .usage { display: flex; align-items: center; gap: 10px; }
 .usage .small-bar { width: 90px; }
+
+/* ---------- dashboard charts ---------- */
+.share-bar { display: flex; height: 22px; overflow: hidden; border-radius: 3px; background: var(--grey-2); }
+.share-0 { background: var(--navy); }
+.share-1 { background: var(--magenta); }
+.share-2 { background: var(--amber); }
+.share-3 { background: var(--success); }
+.share-4 { background: var(--slate); }
+.legend { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 16px; }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.day-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; border-bottom: 2px solid var(--navy); }
+.day-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.day-col:hover .day-bar { background: var(--magenta); }
+.day-bar { width: 100%; background: var(--navy); min-height: 0; }
+.day-axis { display: flex; justify-content: space-between; margin-top: 4px; }
+.diff-up { color: var(--danger); font-weight: 600; }
+.diff-down { color: var(--success); font-weight: 600; }

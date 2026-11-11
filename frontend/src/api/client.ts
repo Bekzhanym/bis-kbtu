@@ -145,7 +145,7 @@ export const api = {
     request<Category>(`/api/categories/${id}`, { method: 'PATCH', body: data }),
 
   // transactions
-  transactions: (q: { scope?: 'mine' | 'all'; month?: string; category_id?: number; min_amount?: string } = {}) =>
+  transactions: (q: { scope?: 'mine' | 'all'; month?: string; category_id?: number; min_amount?: string; max_amount?: string } = {}) =>
     request<Transaction[]>('/api/transactions', { query: q }),
   createTransaction: (data: TransactionInput) =>
     request<Transaction>('/api/transactions', { method: 'POST', body: data }),

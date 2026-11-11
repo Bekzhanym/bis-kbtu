@@ -4,7 +4,8 @@ import { useAuth } from '../auth/AuthContext'
 import { Alert, ProgressPanel } from '../components/Field'
 import { MonthPicker } from '../components/MonthPicker'
 import { TransactionForm } from '../components/TransactionForm'
-import { dateLabel, kzt, monthStart } from '../lib/format'
+import { dailyTotals } from '../lib/filters'
+import { dateLabel, kzt, monthLabel, monthStart } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
 import { useMonth } from '../lib/useMonth'
 
@@ -14,10 +15,23 @@ export function DashboardPage() {
   const report = useLoad(() => api.monthlyReport(monthStart(month)), [month])
   const recent = useLoad(() => api.transactions({ month: monthStart(month) }), [month])
   const categories = useLoad(() => api.categories(), [])
+  const compare = useLoad(() => api.compareMonths(monthStart(month)), [month])
 
   const r = report.data
   const over = r?.categories.filter((c) => c.over_limit) ?? []
   const remaining = r ? Number(r.total_limit) - Number(r.total_spent) : 0
+  const days = dailyTotals(recent.data ?? [], month)
+  const peak = Math.max(...days, 1)
+  const cmp = compare.data
+  const cmpText = !cmp ? '—'
+    : cmp.diff_pct === null ? 'нет данных'
+    : `${cmp.diff_pct > 0 ? '+' : ''}${cmp.diff_pct}%`
+  // share of each category in the family total, largest first
+  const shares = r && Number(r.total_spent) > 0
+    ? r.categories.filter((c) => Number(c.spent) > 0)
+      .map((c) => ({ ...c, pct: (Number(c.spent) / Number(r.total_spent)) * 100 }))
+      .sort((a, b) => b.pct - a.pct)
+    : []
 
   return (
     <>
@@ -43,7 +57,7 @@ export function DashboardPage() {
             {categories.data && (
               <TransactionForm categories={categories.data} onSubmit={async (data) => {
                 await api.createTransaction(data)
-                await Promise.all([report.reload(), recent.reload()])
+                await Promise.all([report.reload(), recent.reload(), compare.reload()])
               }} />
             )}
           </section>
@@ -70,6 +84,34 @@ export function DashboardPage() {
             </section>
           )}
 
+          {shares.length > 0 && (
+            <section className="section">
+              <h2>Структура расходов семьи</h2>
+              <div className="share-bar" role="img" aria-label="Доли категорий в расходах">
+                {shares.map((c, i) => (
+                  <div key={c.category_id} className={`share-${i % 5}`} style={{ width: `${c.pct}%` }} title={`${c.category_name}: ${Math.round(c.pct)}%`} />
+                ))}
+              </div>
+              <ul className="legend">
+                {shares.map((c, i) => (
+                  <li key={c.category_id}><span className={`dot share-${i % 5}`} />{c.category_name} <b>{Math.round(c.pct)}%</b></li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="section">
+            <h2>Мои расходы по дням</h2>
+            <div className="day-chart" role="img" aria-label={`Расходы по дням, ${monthLabel(month)}`}>
+              {days.map((v, i) => (
+                <div key={i} className="day-col" title={`${i + 1}: ${kzt(v)}`}>
+                  <div className="day-bar" style={{ height: `${(v / peak) * 100}%` }} />
+                </div>
+              ))}
+            </div>
+            <div className="day-axis muted small"><span>1</span><span>{days.length}</span></div>
+          </section>
+
           <section className="section">
             <div className="card-head">
               <h2>Мои расходы за месяц</h2>
@@ -94,6 +136,7 @@ export function DashboardPage() {
           { label: 'Потрачено семьёй', value: kzt(r?.total_spent) },
           { label: 'Мои расходы', value: kzt(r?.my_spent) },
           { label: 'Сумма лимитов', value: kzt(r?.total_limit) },
+          { label: 'К прошлому месяцу', value: cmpText, bad: (cmp?.diff_pct ?? 0) > 0 },
           { label: 'Остаток', value: r ? kzt(remaining) : '—', strong: true, bad: remaining < 0 },
         ]} />
       </div>

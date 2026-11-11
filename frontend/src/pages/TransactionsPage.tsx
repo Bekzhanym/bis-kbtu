@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { api } from '../api/client'
 import type { Transaction } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
@@ -6,6 +6,7 @@ import { Alert, Field, MoneyInput } from '../components/Field'
 import { MonthPicker } from '../components/MonthPicker'
 import { SplitForm } from '../components/SplitForm'
 import { TransactionForm } from '../components/TransactionForm'
+import { SORT_LABELS, matchesSearch, sortTransactions, validateRange, type Sort } from '../lib/filters'
 import { dateLabel, kzt, monthStart } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
 import { useMonth } from '../lib/useMonth'
@@ -20,22 +21,37 @@ export function TransactionsPage() {
   const [scope, setScope] = useState<'mine' | 'all'>('mine')
   const [categoryId, setCategoryId] = useState('')
   const [minAmount, setMinAmount] = useState('')
+  const [maxAmount, setMaxAmount] = useState('')
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<Sort>('date_desc')
   const [mode, setMode] = useState<Mode>('none')
   const [editing, setEditing] = useState<number | null>(null)
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   const minError = minAmount && validateAmount(minAmount) ? 'Введите положительное число' : undefined
+  const maxError = (maxAmount && validateAmount(maxAmount) ? 'Введите положительное число' : undefined)
+    ?? (!minError ? validateRange(normalizeAmount(minAmount), normalizeAmount(maxAmount)) : undefined)
+  const min = minAmount && !minError ? normalizeAmount(minAmount) : undefined
+  const max = maxAmount && !maxError ? normalizeAmount(maxAmount) : undefined
   const categories = useLoad(() => api.categories(), [])
   const list = useLoad(
     () => api.transactions({
       scope, month: monthStart(month),
       category_id: categoryId ? Number(categoryId) : undefined,
-      min_amount: minAmount && !minError ? normalizeAmount(minAmount) : undefined,
+      min_amount: min, max_amount: max,
     }),
-    [scope, month, categoryId, minAmount],
+    [scope, month, categoryId, min, max],
   )
 
-  const rows = list.data ?? []
+  // search and sort run in the browser on the loaded month
+  const rows = useMemo(
+    () => sortTransactions((list.data ?? []).filter((t) => matchesSearch(t, search)), sort),
+    [list.data, search, sort],
+  )
+  const filtered = Boolean(categoryId || minAmount || maxAmount || search || sort !== 'date_desc')
+  function resetFilters() {
+    setCategoryId(''); setMinAmount(''); setMaxAmount(''); setSearch(''); setSort('date_desc')
+  }
   const total = rows.reduce((s, t) => s + Number(t.amount), 0)
 
   async function remove(t: Transaction) {
@@ -96,8 +112,19 @@ export function TransactionsPage() {
               {categories.data?.map((c) => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
             </select>
           </Field>
-          <Field label="Сумма больше" error={minError}>
+          <Field label="Сумма от" error={minError}>
             <MoneyInput placeholder="10000" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} />
+          </Field>
+          <Field label="Сумма до" error={maxError}>
+            <MoneyInput placeholder="50000" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} />
+          </Field>
+          <Field label="Поиск">
+            <input type="search" placeholder="Категория, заметка…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </Field>
+          <Field label="Сортировка">
+            <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+              {Object.entries(SORT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
           </Field>
           {isAdmin && (
             <Field label="Показать">
@@ -107,6 +134,7 @@ export function TransactionsPage() {
               </select>
             </Field>
           )}
+          {filtered && <button className="btn btn-ghost" onClick={resetFilters}>Сбросить</button>}
         </div>
 
         {list.error && <Alert>{list.error}</Alert>}

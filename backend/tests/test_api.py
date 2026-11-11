@@ -202,3 +202,9 @@ def test_indexes_exist_and_are_used(client):
             "WHERE user_id = 2 AND transaction_date >= '2026-10-01' AND transaction_date < '2026-11-01'")))
     assert "ix_transactions_user_date" in plan
 
+
+# ---------- filters (24B031677) ----------
+def test_amount_range_filter(client, admin):
+    r = client.get("/api/transactions?scope=all&min_amount=10000&max_amount=50000", headers=admin).json()
+    assert r and all(10000 < float(t["amount"]) <= 50000 for t in r)
+

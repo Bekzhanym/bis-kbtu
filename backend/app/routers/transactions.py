@@ -46,6 +46,7 @@ def list_transactions(
     month: date | None = Query(None, description="Any date inside the month"),
     category_id: int | None = None,
     min_amount: Decimal | None = Query(None, description="Only amounts strictly greater than this"),
+    max_amount: Decimal | None = Query(None, description="Only amounts less than or equal to this"),
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -62,6 +63,8 @@ def list_transactions(
         q = q.filter(models.Transaction.category_id == category_id)
     if min_amount is not None:
         q = q.filter(models.Transaction.amount > min_amount)
+    if max_amount is not None:
+        q = q.filter(models.Transaction.amount <= max_amount)
     rows = q.order_by(models.Transaction.transaction_date.desc(),
                       models.Transaction.transaction_id.desc()).all()
     return [_out(t, user) for t in rows]
