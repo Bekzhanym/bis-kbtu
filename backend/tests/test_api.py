@@ -31,6 +31,8 @@ def test_register_rejects_bad_input(client):
         {"full_name": "", "email": "a@b.com", "password": "secret123"},
         {"full_name": "A", "email": "not-an-email", "password": "secret123"},
         {"full_name": "A", "email": "a@b.com", "password": "short"},
+        {"full_name": "A", "email": "a@b.com", "password": "aaaaaaaa"},   # no digits
+        {"full_name": "A", "email": "a@b.com", "password": "12345678"},   # no letters
     ]
     for body in bad:
         assert client.post("/api/auth/register", json=body).status_code == 422
@@ -208,3 +210,8 @@ def test_amount_range_filter(client, admin):
     r = client.get("/api/transactions?scope=all&min_amount=10000&max_amount=50000", headers=admin).json()
     assert r and all(10000 < float(t["amount"]) <= 50000 for t in r)
 
+
+
+def test_password_with_kazakh_letters_is_accepted(client):
+    body = {"full_name": "A", "email": "kz@b.com", "password": "әңүөқғ12"}
+    assert client.post("/api/auth/register", json=body).status_code == 201

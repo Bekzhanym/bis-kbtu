@@ -53,12 +53,13 @@ const MESSAGES: Record<string, string> = {
   'The household must keep at least one admin': 'В семье должен остаться хотя бы один администратор',
   'Database constraint violated': 'Данные нарушают ограничения базы данных',
   'Invalid refresh token': 'Сессия истекла, войдите снова',
+  'Value error, Password must contain letters and digits': 'Пароль должен содержать буквы и цифры',
 }
 
 function messageFrom(detail: unknown, fallback: string): string {
   if (typeof detail === 'string') return MESSAGES[detail] ?? detail
   if (Array.isArray(detail)) {
-    return detail.map((d) => `${(d.loc ?? []).slice(1).join('.')}: ${d.msg}`).join('; ')
+    return detail.map((d) => MESSAGES[d.msg] ?? `${(d.loc ?? []).slice(1).join('.')}: ${d.msg}`).join('; ')
   }
   return fallback
 }

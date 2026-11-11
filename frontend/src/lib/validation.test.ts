@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   hasErrors, normalizeAmount, validateAmount, validateBudget, validateDate, validateEmail,
-  validateLogin, validatePassword, validatePasswordChange, validateRegister, validateTransaction,
+  validateCategoryId, validateLogin, validateMonth, validateName, validateNote, validatePassword,
+  validatePasswordChange, validateRegister, validateTransaction,
 } from './validation'
 
 describe('validateAmount (main action rule: amount > 0, max 2 decimals)', () => {
@@ -63,4 +64,56 @@ describe('form validators', () => {
     const e = validatePasswordChange({ current: 'demo12345', next: 'demo12345', confirm: 'demo12345' })
     expect(e.next).toBeDefined()
   })
+})
+
+// ---------- regression tests for bugs found in testing (24B032166, docs/test-reports.md) ----------
+describe('bug fixes: dates that do not exist', () => {
+  it.each(['2026-02-31', '2026-04-31', '2025-02-29', '2026-02-30'])('BUG-01: rejects %j', (v) => {
+    expect(validateDate(v)).toBe('Такой даты нет')
+  })
+  it('accepts 29 Feb in a leap year', () => expect(validateDate('2028-02-29')).toBeUndefined())
+  it('BUG-02: rejects years outside 1900..2100', () => {
+    expect(validateDate('1899-12-31')).toBeDefined()
+    expect(validateDate('2101-01-01')).toBeDefined()
+  })
+})
+
+describe('bug fixes: budget month', () => {
+  it.each(['2026-13', '2026-00'])('BUG-03: rejects month %j', (month) => {
+    expect(validateBudget({ category_id: '1', month, monthly_limit: '5000' }).month).toBe('Некорректный месяц')
+  })
+  it('accepts a normal month', () => expect(validateMonth('2026-10')).toBeUndefined())
+})
+
+describe('bug fixes: category id', () => {
+  it.each(['abc', '1.5', '-1', '0', ''])('BUG-04: rejects %j', (v) => expect(validateCategoryId(v)).toBeDefined())
+})
+
+describe('bug fixes: emails the server rejects', () => {
+  it.each(['a@b..com', '.a@b.com', 'a.@b.com', 'a@-b.com'])('BUG-05: rejects %j', (v) => {
+    expect(validateEmail(v)).toBeDefined()
+  })
+})
+
+describe('bug fixes: length counted in characters, like the server', () => {
+  it('BUG-06: 60 emoji is a valid name (was 120 UTF-16 units)', () => {
+    expect(validateName('😀'.repeat(60))).toBeUndefined()
+    expect(validateName('😀'.repeat(101))).toBeDefined()
+  })
+  it('BUG-06: 150 emoji is a valid note', () => expect(validateNote('😀'.repeat(150))).toBeUndefined())
+})
+
+describe('bug fixes: password letters', () => {
+  it.each(['ёёёёёёё1', 'әңүөқғһі1'])('BUG-07: accepts %j (ё and Kazakh letters are letters)', (v) => {
+    expect(validatePassword(v)).toBeUndefined()
+  })
+})
+
+describe('bug fixes: thousands separator in amounts', () => {
+  it.each([['1,500.50', '1500.50'], ['1.500,50', '1500.50'], ['1,234,567.89', '1234567.89']])(
+    'BUG-09: %j -> %j', (input, out) => {
+      expect(normalizeAmount(input)).toBe(out)
+      expect(validateAmount(input)).toBeUndefined()
+    })
+  it('still rejects broken input', () => expect(validateAmount('1,5,0')).toBeDefined())
 })

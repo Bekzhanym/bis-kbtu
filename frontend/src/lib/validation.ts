@@ -1,9 +1,16 @@
 // Client-side validation: immediate feedback. The server re-checks everything.
 export type Errors = Record<string, string>
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+// local@domain.tld: no spaces, no dot at the start/end of a part, no ".." (the server rejects these)
+const EMAIL_RE = /^(?!\.)(?!.*\.\.)[^\s@]+(?<!\.)@(?!-)[^\s@.]+(\.[^\s@.]+)+$/
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
+const MONTH_RE = /^(\d{4})-(\d{2})$/
 const MAX_MONEY = 9_999_999_999.99
+const MIN_YEAR = 1900
+const MAX_YEAR = 2100
+
+/** Length in characters as the server counts them (an emoji is 1, not 2 UTF-16 units). */
+const charLength = (s: string) => [...s].length
 
 export const hasErrors = (e: Errors) => Object.keys(e).length > 0
 
@@ -16,7 +23,7 @@ function collect(entries: Record<string, string | undefined>): Errors {
 export function validateName(v: string, max = 100): string | undefined {
   const s = v.trim()
   if (!s) return 'Обязательное поле'
-  if (s.length > max) return `Не длиннее ${max} символов`
+  if (charLength(s) > max) return `Не длиннее ${max} символов`
 }
 
 export function validateEmail(v: string): string | undefined {
@@ -30,12 +37,20 @@ export function validatePassword(v: string): string | undefined {
   if (!v) return 'Введите пароль'
   if (v.length < 8) return 'Минимум 8 символов'
   if (v.length > 128) return 'Не длиннее 128 символов'
-  if (!/[A-Za-zА-Яа-я]/.test(v) || !/\d/.test(v)) return 'Пароль должен содержать буквы и цифры'
+  // \p{L}: any letter, including ё and Kazakh letters (ә, ң, ү…)
+  if (!/\p{L}/u.test(v) || !/\d/.test(v)) return 'Пароль должен содержать буквы и цифры'
 }
 
-/** Accepts "1500", "1500.5", "1 500,50". Returns the value the API expects. */
+/** Accepts "1500", "1500.5", "1 500,50", "1,500.50", "1.500,50". Returns the value the API expects. */
 export function normalizeAmount(v: string): string {
-  return v.replace(/\s/g, '').replace(',', '.')
+  const s = v.replace(/\s/g, '')
+  // Both separators present: the last one is the decimal point, the other one separates thousands
+  if (s.includes(',') && s.includes('.')) {
+    const decimal = s.lastIndexOf(',') > s.lastIndexOf('.') ? ',' : '.'
+    const thousands = decimal === ',' ? '.' : ','
+    return s.split(thousands).join('').replace(decimal, '.')
+  }
+  return s.replace(',', '.')
 }
 
 export function validateAmount(v: string): string | undefined {
@@ -50,15 +65,29 @@ export function validateAmount(v: string): string | undefined {
 
 export function validateDate(v: string): string | undefined {
   if (!v) return 'Укажите дату'
-  if (!DATE_RE.test(v) || Number.isNaN(new Date(v + 'T00:00:00').getTime())) return 'Некорректная дата'
+  const m = DATE_RE.exec(v)
+  if (!m) return 'Некорректная дата'
+  const [y, mo, d] = m.slice(1).map(Number)
+  // new Date('2026-02-31') silently becomes 3 March, so compare the parts back
+  const dt = new Date(Date.UTC(y, mo - 1, d))
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return 'Такой даты нет'
+  if (y < MIN_YEAR || y > MAX_YEAR) return `Год должен быть от ${MIN_YEAR} до ${MAX_YEAR}`
+}
+
+export function validateMonth(v: string): string | undefined {
+  const m = MONTH_RE.exec(v)
+  if (!m) return 'Выберите месяц'
+  const [y, mo] = m.slice(1).map(Number)
+  if (mo < 1 || mo > 12 || y < MIN_YEAR || y > MAX_YEAR) return 'Некорректный месяц'
 }
 
 export function validateNote(v: string, max = 200): string | undefined {
-  if (v.trim().length > max) return `Не длиннее ${max} символов`
+  if (charLength(v.trim()) > max) return `Не длиннее ${max} символов`
 }
 
 export function validateCategoryId(v: string | number): string | undefined {
-  if (!v || Number(v) <= 0) return 'Выберите категорию'
+  const n = Number(v)
+  if (!Number.isInteger(n) || n <= 0) return 'Выберите категорию'
 }
 
 export function validateLogin(f: { email: string; password: string }): Errors {
@@ -86,7 +115,7 @@ export function validateTransaction(f: { category_id: string; amount: string; tr
 export function validateBudget(f: { category_id: string; month: string; monthly_limit: string }): Errors {
   return collect({
     category_id: validateCategoryId(f.category_id),
-    month: /^\d{4}-\d{2}$/.test(f.month) ? undefined : 'Выберите месяц',
+    month: validateMonth(f.month),
     monthly_limit: validateAmount(f.monthly_limit),
   })
 }

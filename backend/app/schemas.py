@@ -6,7 +6,14 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, Str
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 Email = Annotated[EmailStr, AfterValidator(lambda v: v.strip().lower()), Field(max_length=254)]
-Password = Annotated[str, Field(min_length=8, max_length=128)]
+def _letters_and_digits(v: str) -> str:
+    # Same rule as the frontend: at least one letter (any alphabet) and one digit
+    if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
+        raise ValueError("Password must contain letters and digits")
+    return v
+
+
+Password = Annotated[str, Field(min_length=8, max_length=128), AfterValidator(_letters_and_digits)]
 Money = Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=2)]
 Note = Annotated[str | None, StringConstraints(strip_whitespace=True, max_length=200)]
 Role = Literal["admin", "member"]
