@@ -2,6 +2,7 @@ import { api } from '../api/client'
 import { Alert, ProgressPanel } from '../components/Field'
 import { MonthPicker } from '../components/MonthPicker'
 import { kzt, monthLabel, monthStart } from '../lib/format'
+import { downloadMonthlyReport } from '../lib/reportCsv'
 import { useLoad } from '../lib/useLoad'
 import { useMonth } from '../lib/useMonth'
 
@@ -28,7 +29,17 @@ export function ReportPage() {
         <div className="with-aside">
         <div className="content">
           <section className="section">
-            <h2>По категориям</h2>
+            <div className="card-head">
+              <h2>По категориям</h2>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={report.loading || r.month_start !== monthStart(month)}
+                onClick={() => downloadMonthlyReport(r)}
+              >
+                Скачать CSV
+              </button>
+            </div>
             <div className="table-wrap">
               <table>
                 <thead>
