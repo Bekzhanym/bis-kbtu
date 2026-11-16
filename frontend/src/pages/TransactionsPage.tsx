@@ -3,6 +3,8 @@ import { api } from '../api/client'
 import type { Transaction } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, Field, MoneyInput } from '../components/Field'
+import { EmptyState, Skeleton, useToast } from '../components/Feedback'
+import { categoryIcon } from '../lib/categories'
 import { MonthPicker } from '../components/MonthPicker'
 import { SplitForm } from '../components/SplitForm'
 import { TransactionForm } from '../components/TransactionForm'
@@ -26,7 +28,7 @@ export function TransactionsPage() {
   const [sort, setSort] = useState<Sort>('date_desc')
   const [mode, setMode] = useState<Mode>('none')
   const [editing, setEditing] = useState<number | null>(null)
-  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  const toast = useToast()
 
   const minError = minAmount && validateAmount(minAmount) ? 'Введите положительное число' : undefined
   const maxError = (maxAmount && validateAmount(maxAmount) ? 'Введите положительное число' : undefined)
@@ -58,10 +60,10 @@ export function TransactionsPage() {
     if (!confirm(`Удалить расход ${kzt(t.amount)} (${t.category_name})?`)) return
     try {
       await api.deleteTransaction(t.transaction_id)
-      setMessage({ kind: 'success', text: 'Расход удалён' })
+      toast('Расход удалён')
       await list.reload()
     } catch (e) {
-      setMessage({ kind: 'error', text: (e as Error).message })
+      toast((e as Error).message, { kind: 'error' })
     }
   }
 
@@ -78,14 +80,12 @@ export function TransactionsPage() {
         </div>
       </div>
 
-      {message && <Alert kind={message.kind}>{message.text}</Alert>}
-
       {mode === 'add' && categories.data && (
         <section className="section">
           <h2>Новый расход</h2>
           <TransactionForm categories={categories.data} onCancel={() => setMode('none')} onSubmit={async (d) => {
             await api.createTransaction(d)
-            setMessage({ kind: 'success', text: 'Расход сохранён' })
+            toast('Расход сохранён')
             await list.reload()
           }} />
         </section>
@@ -96,7 +96,7 @@ export function TransactionsPage() {
           <p className="muted small">Все части сохраняются одной транзакцией: если одна не пройдёт проверку, не сохранится ни одна.</p>
           <SplitForm categories={categories.data} onSubmit={async (items) => {
             await api.createSplit(items)
-            setMessage({ kind: 'success', text: `Чек сохранён: ${items.length} записи` })
+            toast(`Чек сохранён: ${items.length} записи`)
             setMode('none')
             await list.reload()
           }} />
@@ -159,7 +159,7 @@ export function TransactionsPage() {
                       onSubmit={async (d) => {
                         await api.updateTransaction(t.transaction_id, d)
                         setEditing(null)
-                        setMessage({ kind: 'success', text: 'Изменения сохранены' })
+                        toast('Изменения сохранены')
                         await list.reload()
                       }} />
                   </td>
@@ -168,7 +168,7 @@ export function TransactionsPage() {
                 <tr key={t.transaction_id}>
                   <td>{dateLabel(t.transaction_date)}</td>
                   {scope === 'all' && <td>{t.user_full_name}</td>}
-                  <td>{t.category_name}</td>
+                  <td><span className="cat-icon" aria-hidden>{categoryIcon(t.category_name)}</span>{t.category_name}</td>
                   <td className="muted">{t.is_mine ? t.note ?? '' : '🔒'}</td>
                   <td className="num">{kzt(t.amount)}</td>
                   <td className="actions">
@@ -181,8 +181,19 @@ export function TransactionsPage() {
                   </td>
                 </tr>
               ))}
+              {list.loading && !list.data && (
+                <tr><td colSpan={6}><Skeleton rows={4} /></td></tr>
+              )}
               {!list.loading && rows.length === 0 && (
-                <tr><td colSpan={6} className="muted center">Ничего не найдено</td></tr>
+                <tr><td colSpan={6}>
+                  {filtered ? (
+                    <EmptyState icon="🔍" title="Ничего не найдено" text="Попробуйте изменить или сбросить фильтры."
+                      action={<button className="btn btn-ghost btn-sm" onClick={resetFilters}>Сбросить фильтры</button>} />
+                  ) : (
+                    <EmptyState icon="🧾" title="В этом месяце расходов нет" text="Добавьте первый расход, и он появится здесь."
+                      action={<button className="btn btn-primary btn-sm" onClick={() => setMode('add')}>+ Добавить расход</button>} />
+                  )}
+                </td></tr>
               )}
             </tbody>
             {rows.length > 0 && (

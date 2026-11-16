@@ -3,7 +3,9 @@ import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, ProgressPanel } from '../components/Field'
 import { MonthPicker } from '../components/MonthPicker'
+import { EmptyState, Skeleton, useToast } from '../components/Feedback'
 import { TransactionForm } from '../components/TransactionForm'
+import { categoryIcon } from '../lib/categories'
 import { dailyTotals } from '../lib/filters'
 import { dateLabel, kzt, monthLabel, monthStart } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
@@ -11,6 +13,7 @@ import { useMonth } from '../lib/useMonth'
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const toast = useToast()
   const [month, setMonth] = useMonth()
   const report = useLoad(() => api.monthlyReport(monthStart(month)), [month])
   const recent = useLoad(() => api.transactions({ month: monthStart(month) }), [month])
@@ -58,10 +61,12 @@ export function DashboardPage() {
               <TransactionForm categories={categories.data} onSubmit={async (data) => {
                 await api.createTransaction(data)
                 await Promise.all([report.reload(), recent.reload(), compare.reload()])
+                toast('Расход добавлен')
               }} />
             )}
           </section>
 
+          {!r && report.loading && <section className="section"><Skeleton rows={4} /></section>}
           {r && (
             <section className="section">
               <div className="card-head">
@@ -73,7 +78,7 @@ export function DashboardPage() {
                   const pct = c.monthly_limit ? Math.min(100, (Number(c.spent) / Number(c.monthly_limit)) * 100) : 0
                   return (
                     <div key={c.category_id}>
-                      <div className="bar-label"><b>{c.category_name}</b>
+                      <div className="bar-label"><b><span className="cat-icon" aria-hidden>{categoryIcon(c.category_name)}</span>{c.category_name}</b>
                         <span className="muted">{kzt(c.spent)} из {c.monthly_limit ? kzt(c.monthly_limit) : 'без лимита'}</span>
                       </div>
                       <div className="bar"><div className={`bar-fill ${c.over_limit ? 'bad' : pct > 80 ? 'warn' : ''}`} style={{ width: `${pct}%` }} /></div>
@@ -94,7 +99,7 @@ export function DashboardPage() {
               </div>
               <ul className="legend">
                 {shares.map((c, i) => (
-                  <li key={c.category_id}><span className={`dot share-${i % 5}`} />{c.category_name} <b>{Math.round(c.pct)}%</b></li>
+                  <li key={c.category_id}><span className={`dot share-${i % 5}`} />{categoryIcon(c.category_name)} {c.category_name} <b>{Math.round(c.pct)}%</b></li>
                 ))}
               </ul>
             </section>
@@ -117,11 +122,16 @@ export function DashboardPage() {
               <h2>Мои расходы за месяц</h2>
               <Link to={`/transactions?month=${month}`}>Все расходы</Link>
             </div>
-            {recent.data?.length === 0 && <p className="muted">В этом месяце расходов нет.</p>}
+            {recent.loading && !recent.data && <Skeleton rows={3} />}
+            {recent.data?.length === 0 && (
+              <EmptyState icon="🧾" title="В этом месяце у вас пока нет расходов"
+                text="Добавьте расход в форме выше или посмотрите прошлые месяцы стрелками вверху страницы." />
+            )}
             <ul className="list">
               {recent.data?.slice(0, 6).map((t) => (
                 <li key={t.transaction_id}>
-                  <div>
+                  <span className="cat-badge" aria-hidden>{categoryIcon(t.category_name)}</span>
+                  <div className="grow">
                     <b>{t.category_name}</b>
                     <span className="muted small">{dateLabel(t.transaction_date)}{t.note ? ` · ${t.note}` : ''}</span>
                   </div>

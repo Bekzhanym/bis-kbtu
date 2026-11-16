@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
+import { ToastProvider } from './components/Feedback'
 import { Layout } from './components/Layout'
 import { GuestOnly, RequireAuth } from './components/RequireAuth'
 import { AdminPage } from './pages/AdminPage'
@@ -13,6 +14,7 @@ import { TransactionsPage } from './pages/TransactionsPage'
 export default function App() {
   return (
     <AuthProvider>
+      <ToastProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
@@ -27,6 +29,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

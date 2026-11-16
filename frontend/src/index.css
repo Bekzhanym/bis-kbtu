@@ -234,3 +234,24 @@ tfoot td { font-weight: 700; border-bottom: 0; background: var(--grey); }
 .day-axis { display: flex; justify-content: space-between; margin-top: 4px; }
 .diff-up { color: var(--danger); font-weight: 600; }
 .diff-down { color: var(--success); font-weight: 600; }
+
+/* ---------- feedback: toasts, skeletons, empty states ---------- */
+.toasts { position: fixed; right: 20px; bottom: 20px; z-index: 50; display: flex; flex-direction: column; gap: 10px; max-width: min(420px, calc(100vw - 32px)); }
+.toast { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 6px; color: #fff; box-shadow: 0 8px 24px rgba(13, 18, 108, .25); animation: toast-in .2s ease-out; font-size: 16px; }
+.toast span { flex: 1; }
+.toast-success { background: var(--success); }
+.toast-error { background: var(--danger); }
+.toast-info { background: var(--navy); }
+.toast-action { font: inherit; font-weight: 700; color: #fff; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.6); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+.toast-close { font-size: 22px; line-height: 1; color: #fff; background: none; border: 0; cursor: pointer; opacity: .8; }
+@keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+.skeleton-group { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+.skeleton { border-radius: 4px; background: linear-gradient(90deg, var(--grey) 25%, var(--grey-2) 50%, var(--grey) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite linear; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 28px 16px; }
+.empty-icon { font-size: 40px; }
+.empty p { margin: 0; max-width: 420px; }
+.cat-icon { margin-right: 8px; }
+.cat-badge { width: 42px; height: 42px; border-radius: 50%; background: var(--grey); display: grid; place-items: center; font-size: 20px; flex: none; }
+.list li .grow { flex: 1; }
+@media (prefers-reduced-motion: reduce) { .toast, .skeleton { animation: none; } }
