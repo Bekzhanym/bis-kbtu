@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, ProgressPanel } from '../components/Field'
 import { MonthPicker } from '../components/MonthPicker'
+import { Achievements } from '../components/Achievements'
 import { EmptyState, Skeleton, useToast } from '../components/Feedback'
 import { TransactionForm } from '../components/TransactionForm'
 import { categoryIcon } from '../lib/categories'
@@ -88,6 +89,8 @@ export function DashboardPage() {
               </div>
             </section>
           )}
+
+          {r && recent.data && <Achievements report={r} compare={cmp ?? null} mine={recent.data} />}
 
           {shares.length > 0 && (
             <section className="section">

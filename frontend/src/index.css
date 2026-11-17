@@ -255,3 +255,21 @@ tfoot td { font-weight: 700; border-bottom: 0; background: var(--grey); }
 .cat-badge { width: 42px; height: 42px; border-radius: 50%; background: var(--grey); display: grid; place-items: center; font-size: 20px; flex: none; }
 .list li .grow { flex: 1; }
 @media (prefers-reduced-motion: reduce) { .toast, .skeleton { animation: none; } }
+
+/* ---------- gamification ---------- */
+.score-row { display: flex; align-items: center; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; }
+.score-row p { margin: 0 0 4px; }
+.score-ring { --p: 0%; width: 112px; height: 112px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: conic-gradient(var(--magenta) var(--p), var(--grey-2) 0); }
+.score-ring span { width: 84px; height: 84px; border-radius: 50%; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.score-ring b { font-size: 30px; color: var(--navy); }
+.score-ring small { color: var(--muted); font-size: 13px; }
+.level { font-size: 22px; font-weight: 800; color: var(--navy); }
+.badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.badge-card { display: flex; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--grey); opacity: .75; }
+.badge-card .badge-icon { font-size: 30px; filter: grayscale(1); }
+.badge-card.earned { opacity: 1; background: var(--magenta-soft); border-color: var(--magenta); }
+.badge-card.earned .badge-icon { filter: none; animation: pop .4s ease-out; }
+.badge-card .badge { align-self: flex-start; }
+@keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .badge-card.earned .badge-icon { animation: none; } }
