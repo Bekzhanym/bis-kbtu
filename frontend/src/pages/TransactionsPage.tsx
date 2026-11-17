@@ -56,11 +56,26 @@ export function TransactionsPage() {
   }
   const total = rows.reduce((s, t) => s + Number(t.amount), 0)
 
+  // No "are you sure?" dialog: delete at once and offer "Undo" for 8 seconds instead
   async function remove(t: Transaction) {
-    if (!confirm(`Удалить расход ${kzt(t.amount)} (${t.category_name})?`)) return
     try {
       await api.deleteTransaction(t.transaction_id)
-      toast('Расход удалён')
+      toast(`Расход ${kzt(t.amount)} (${t.category_name}) удалён`, {
+        ms: 8000,
+        action: { label: 'Отменить', onClick: () => void restore(t) },
+      })
+      await list.reload()
+    } catch (e) {
+      toast((e as Error).message, { kind: 'error' })
+    }
+  }
+
+  async function restore(t: Transaction) {
+    try {
+      await api.createTransaction({
+        category_id: t.category_id, amount: t.amount, transaction_date: t.transaction_date, note: t.note,
+      })
+      toast('Расход восстановлен', { kind: 'info' })
       await list.reload()
     } catch (e) {
       toast((e as Error).message, { kind: 'error' })
@@ -83,7 +98,7 @@ export function TransactionsPage() {
       {mode === 'add' && categories.data && (
         <section className="section">
           <h2>Новый расход</h2>
-          <TransactionForm categories={categories.data} onCancel={() => setMode('none')} onSubmit={async (d) => {
+          <TransactionForm categories={categories.data} existing={list.data ?? []} onCancel={() => setMode('none')} onSubmit={async (d) => {
             await api.createTransaction(d)
             toast('Расход сохранён')
             await list.reload()
@@ -154,7 +169,7 @@ export function TransactionsPage() {
               {rows.map((t) => editing === t.transaction_id && categories.data ? (
                 <tr key={t.transaction_id}>
                   <td colSpan={scope === 'all' ? 6 : 5}>
-                    <TransactionForm categories={categories.data} initial={t} submitLabel="Сохранить"
+                    <TransactionForm categories={categories.data} existing={list.data ?? []} initial={t} submitLabel="Сохранить"
                       onCancel={() => setEditing(null)}
                       onSubmit={async (d) => {
                         await api.updateTransaction(t.transaction_id, d)

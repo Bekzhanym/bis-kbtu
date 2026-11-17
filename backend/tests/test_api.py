@@ -215,3 +215,13 @@ def test_amount_range_filter(client, admin):
 def test_password_with_kazakh_letters_is_accepted(client):
     body = {"full_name": "A", "email": "kz@b.com", "password": "әңүөқғ12"}
     assert client.post("/api/auth/register", json=body).status_code == 201
+
+
+# ---------- error prevention (24B031677) ----------
+def test_future_expense_date_is_rejected(client, member):
+    from datetime import date, timedelta
+    future = (date.today() + timedelta(days=5)).isoformat()
+    assert client.post("/api/transactions", json={**TX, "transaction_date": future}, headers=member).status_code == 422
+    r = client.post("/api/transactions", json=TX, headers=member).json()
+    assert client.patch(f"/api/transactions/{r['transaction_id']}", json={"transaction_date": future},
+                        headers=member).status_code == 422

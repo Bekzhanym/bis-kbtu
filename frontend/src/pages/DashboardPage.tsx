@@ -58,7 +58,7 @@ export function DashboardPage() {
           <section className="section">
             <h2>Добавить расход</h2>
             {categories.data && (
-              <TransactionForm categories={categories.data} onSubmit={async (data) => {
+              <TransactionForm categories={categories.data} existing={recent.data ?? []} report={r} onSubmit={async (data) => {
                 await api.createTransaction(data)
                 await Promise.all([report.reload(), recent.reload(), compare.reload()])
                 toast('Расход добавлен')

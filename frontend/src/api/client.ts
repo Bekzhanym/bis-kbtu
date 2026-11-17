@@ -53,6 +53,7 @@ const MESSAGES: Record<string, string> = {
   'The household must keep at least one admin': 'В семье должен остаться хотя бы один администратор',
   'Database constraint violated': 'Данные нарушают ограничения базы данных',
   'Invalid refresh token': 'Сессия истекла, войдите снова',
+  'Value error, Expense date cannot be in the future': 'Дата расхода не может быть в будущем',
   'Value error, Password must contain letters and digits': 'Пароль должен содержать буквы и цифры',
 }
 

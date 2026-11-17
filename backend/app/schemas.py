@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -26,6 +26,16 @@ def _first_of_month(v: date) -> date:
 
 
 MonthStart = Annotated[date, AfterValidator(_first_of_month)]
+
+
+def _not_in_future(v: date) -> date:
+    # +1 day of slack: the user's time zone may already be "tomorrow" compared to the server
+    if v > date.today() + timedelta(days=1):
+        raise ValueError("Expense date cannot be in the future")
+    return v
+
+
+ExpenseDate = Annotated[date, AfterValidator(_not_in_future)]
 
 
 class ORM(BaseModel):
@@ -101,7 +111,7 @@ class TransactionIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     category_id: int
     amount: Money
-    transaction_date: date
+    transaction_date: ExpenseDate
     note: Note = None
 
 
@@ -109,7 +119,7 @@ class TransactionUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     category_id: int | None = None
     amount: Money | None = None
-    transaction_date: date | None = None
+    transaction_date: ExpenseDate | None = None
     note: Note = None
 
 
