@@ -273,3 +273,6 @@ tfoot td { font-weight: 700; border-bottom: 0; background: var(--grey); }
 .badge-card .badge { align-self: flex-start; }
 @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .badge-card.earned .badge-icon { animation: none; } }
+
+.tg-steps { background: var(--grey); padding: 16px; border-radius: 4px; }
+.tg-steps p { margin: 0 0 8px; }

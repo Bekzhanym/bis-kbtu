@@ -8,3 +8,9 @@ REFRESH_TOKEN_DAYS = int(os.getenv("REFRESH_TOKEN_DAYS", "7"))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174").split(",")
 # Password given to users loaded from the CSV demo data
 DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo12345")
+
+# Telegram bot (optional). Without a token the bot is simply switched off.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")  # without @, used for t.me links
+# Telegram sends this value in X-Telegram-Bot-Api-Secret-Token, so nobody else can call the webhook
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")

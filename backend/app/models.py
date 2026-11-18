@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String, UniqueConstraint, func,
+    BigInteger, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String, UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -78,3 +78,21 @@ class Budget(Base):
     monthly_limit: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
 
     category: Mapped[Category] = relationship(lazy="joined")
+
+
+class TelegramLink(Base):
+    """Which Telegram chat gets notifications for a user. One chat per user, one user per chat."""
+    __tablename__ = "telegram_links"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", **FK), primary_key=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True)
+    linked_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class TelegramLinkCode(Base):
+    """One-time code from "Connect Telegram" in the profile; the user sends it to the bot as /start CODE."""
+    __tablename__ = "telegram_link_codes"
+
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", **FK), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

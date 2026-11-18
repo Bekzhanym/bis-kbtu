@@ -1,5 +1,5 @@
 import type {
-  Budget, Category, MonthCompare, MonthlyReport, Role, TokenResponse, Transaction, TransactionInput, User,
+  Budget, Category, MonthCompare, MonthlyReport, Role, TelegramStatus, TokenResponse, Transaction, TransactionInput, User,
 } from './types'
 
 const TOKEN_KEY = 'fbt_token'
@@ -53,6 +53,7 @@ const MESSAGES: Record<string, string> = {
   'The household must keep at least one admin': 'В семье должен остаться хотя бы один администратор',
   'Database constraint violated': 'Данные нарушают ограничения базы данных',
   'Invalid refresh token': 'Сессия истекла, войдите снова',
+  'Telegram bot is not configured': 'Telegram-бот ещё не настроен на сервере',
   'Value error, Expense date cannot be in the future': 'Дата расхода не может быть в будущем',
   'Value error, Password must contain letters and digits': 'Пароль должен содержать буквы и цифры',
 }
@@ -167,6 +168,11 @@ export const api = {
 
   // reports
   monthlyReport: (month: string) => request<MonthlyReport>('/api/reports/monthly', { query: { month } }),
+  // telegram
+  telegramStatus: () => request<TelegramStatus>('/api/telegram/status'),
+  telegramLink: () => request<{ code: string; url: string | null; expires_in: number }>('/api/telegram/link', { method: 'POST' }),
+  telegramUnlink: () => request<void>('/api/telegram/link', { method: 'DELETE' }),
+
   compareMonths: (month: string, withMonth?: string) =>
     request<MonthCompare>('/api/reports/compare', { query: { month, with: withMonth } }),
 }

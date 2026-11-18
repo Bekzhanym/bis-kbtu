@@ -2,12 +2,13 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user
+from ..telegram import notify_limits
 from ..utils import month_range
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
@@ -71,20 +72,22 @@ def list_transactions(
 
 
 @router.post("", response_model=schemas.TransactionOut, status_code=201)
-def create_transaction(data: schemas.TransactionIn, user: models.User = Depends(get_current_user),
-                       db: Session = Depends(get_db)):
+def create_transaction(data: schemas.TransactionIn, background: BackgroundTasks,
+                       user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     _active_category(db, data.category_id)
     t = models.Transaction(user_id=user.user_id, **data.model_dump())
     t.note = t.note or None
     db.add(t)
     db.commit()
     db.refresh(t)
+    # Telegram alert if this expense crossed 80% / 100% of the category limit
+    background.add_task(notify_limits, [(user.user_id, t.category_id, t.transaction_date, t.amount)])
     return _out(t, user)
 
 
 @router.post("/split", response_model=list[schemas.TransactionOut], status_code=201)
-def create_split(data: schemas.SplitIn, user: models.User = Depends(get_current_user),
-                 db: Session = Depends(get_db)):
+def create_split(data: schemas.SplitIn, background: BackgroundTasks,
+                 user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Atomic: either every row is saved, or none (ROLLBACK)."""
     try:
         rows = []
@@ -100,6 +103,7 @@ def create_split(data: schemas.SplitIn, user: models.User = Depends(get_current_
         raise
     for t in rows:
         db.refresh(t)
+    background.add_task(notify_limits, [(user.user_id, t.category_id, t.transaction_date, t.amount) for t in rows])
     return [_out(t, user) for t in rows]
 
 

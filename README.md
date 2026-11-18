@@ -43,6 +43,21 @@ Frontend запускается после того, как backend прошёл
 Время жизни токенов: `ACCESS_TOKEN_MINUTES` (15) и `REFRESH_TOKEN_DAYS` (7).
 Индексы БД (`ix_transactions_user_date`, `ix_transactions_date_category`, `ix_transactions_category`, `ix_budgets_month`) создаются при старте, в том числе в старой базе.
 
+## Telegram-бот (уведомления о лимитах)
+Бот пишет автору расхода и всем администраторам, когда по категории потрачено 80% лимита и когда лимит превышен.
+Один Telegram-чат можно привязать только к одному аккаунту, код привязки одноразовый и действует 10 минут.
+
+1. Создайте бота у [@BotFather](https://t.me/BotFather) и получите токен.
+2. Задайте переменные окружения backend: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` (без @), `TELEGRAM_WEBHOOK_SECRET` (любая случайная строка).
+3. Один раз зарегистрируйте webhook:
+   ```bash
+   curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+     -d "url=https://<адрес-backend>/api/telegram/webhook" -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
+   ```
+4. В приложении: Профиль → «Подключить Telegram» → Start в боте.
+
+Без токена бот просто выключен, остальное приложение работает как обычно.
+
 ## Права доступа
 | Действие | Участник | Админ |
 |---|---|---|

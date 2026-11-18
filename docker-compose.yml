@@ -5,6 +5,9 @@ services:
       SECRET_KEY: ${SECRET_KEY:-please-set-a-long-random-secret-key-in-env}
       ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-15}
       REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:-7}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
     volumes:
       - db-data:/data-volume
     # Server is "healthy" only when the API answers /api/health

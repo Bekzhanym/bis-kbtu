@@ -225,3 +225,82 @@ def test_future_expense_date_is_rejected(client, member):
     r = client.post("/api/transactions", json=TX, headers=member).json()
     assert client.patch(f"/api/transactions/{r['transaction_id']}", json={"transaction_date": future},
                         headers=member).status_code == 422
+
+
+# ---------- Telegram bot, notifications, uniqueness (24B032028) ----------
+import pytest  # noqa: E402
+
+SECRET = {"X-Telegram-Bot-Api-Secret-Token": "hook-secret"}
+
+
+@pytest.fixture()
+def tg(monkeypatch):
+    """Bot switched on, messages captured instead of sent."""
+    from app import telegram
+    from app.routers import telegram as router
+    sent = []
+    monkeypatch.setattr(router, "TELEGRAM_BOT_TOKEN", "test-token")
+    monkeypatch.setattr(router, "TELEGRAM_BOT_USERNAME", "family_budget_bot")
+    monkeypatch.setattr(router, "TELEGRAM_WEBHOOK_SECRET", "hook-secret")
+    monkeypatch.setattr(telegram, "send_message", lambda chat_id, text: sent.append((chat_id, text)) or True)
+    return sent
+
+
+def _say(client, chat_id, text):
+    return client.post("/api/telegram/webhook", headers=SECRET,
+                       json={"update_id": 1, "message": {"chat": {"id": chat_id}, "text": text}})
+
+
+def _connect(client, headers, chat_id):
+    link = client.post("/api/telegram/link", headers=headers).json()
+    assert link["url"] == f"https://t.me/family_budget_bot?start={link['code']}"
+    assert _say(client, chat_id, f"/start {link['code']}").status_code == 200
+    return link["code"]
+
+
+def test_telegram_link_flow(client, member, tg):
+    assert client.get("/api/telegram/status", headers=member).json()["linked"] is False
+    code = _connect(client, member, 555)
+    assert "Готово" in tg[-1][1] and tg[-1][0] == 555
+    assert client.get("/api/telegram/status", headers=member).json()["linked"] is True
+    _say(client, 555, f"/start {code}")  # code is one-time
+    assert "устарел" in tg[-1][1]
+    _say(client, 555, "/stop")
+    assert client.get("/api/telegram/status", headers=member).json()["linked"] is False
+
+
+def test_telegram_chat_is_unique_per_account(client, member, admin, tg):
+    _connect(client, member, 777)
+    _connect(client, admin, 777)  # same chat, another account
+    assert "уже привязан к другому аккаунту" in tg[-1][1]
+    assert client.get("/api/telegram/status", headers=admin).json()["linked"] is False
+
+
+def test_telegram_webhook_requires_secret(client, tg):
+    r = client.post("/api/telegram/webhook", json={"message": {"chat": {"id": 1}, "text": "/stop"}})
+    assert r.status_code == 403
+
+
+def test_limit_notification_goes_to_author_and_admins(client, member, admin, tg):
+    _connect(client, member, 1001)
+    _connect(client, admin, 2002)
+    tg.clear()
+    # Transport limit for Oct 2026 is 40 000; push it over
+    tx = {"category_id": 2, "amount": "45000.00", "transaction_date": "2026-10-25"}
+    assert client.post("/api/transactions", json=tx, headers=member).status_code == 201
+    chats = sorted(chat for chat, _ in tg)
+    assert chats == [1001, 2002]
+    assert "Лимит «Transport»" in tg[0][1] and "превышен" in tg[0][1]
+    tg.clear()
+    client.post("/api/transactions", json={**tx, "amount": "100.00"}, headers=member)
+    assert tg == []  # already over the limit: no repeated alerts
+
+
+def test_threshold_crossed():
+    from decimal import Decimal as D
+
+    from app.telegram import threshold_crossed
+    assert threshold_crossed(D(90), D(110), D(100)) == 100
+    assert threshold_crossed(D(70), D(85), D(100)) == 80
+    assert threshold_crossed(D(85), D(90), D(100)) is None
+    assert threshold_crossed(D(110), D(120), D(100)) is None

@@ -73,3 +73,5 @@ export type MonthCompare = {
   diff_pct: number | null
   categories: CategoryCompare[]
 }
+
+export type TelegramStatus = { enabled: boolean; bot_username: string | null; linked: boolean }

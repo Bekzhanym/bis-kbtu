@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { api, tokenStore } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, Field } from '../components/Field'
+import { TelegramCard } from '../components/TelegramCard'
 import { hasErrors, validatePasswordChange, validateProfile, type Errors } from '../lib/validation'
 
 type Msg = { kind: 'success' | 'error'; text: string } | null
@@ -84,6 +85,8 @@ export function ProfilePage() {
           </Field>
           <button className="btn btn-primary">Изменить пароль</button>
         </form>
+
+        <TelegramCard />
       </div>
     </>
   )
