@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { ToastProvider } from './components/Feedback'
+import { I18nProvider } from './lib/i18n'
 import { Layout } from './components/Layout'
 import { GuestOnly, RequireAuth } from './components/RequireAuth'
 import { AdminPage } from './pages/AdminPage'
@@ -13,6 +14,7 @@ import { TransactionsPage } from './pages/TransactionsPage'
 
 export default function App() {
   return (
+    <I18nProvider>
     <AuthProvider>
       <ToastProvider>
       <BrowserRouter>
@@ -31,5 +33,6 @@ export default function App() {
       </BrowserRouter>
       </ToastProvider>
     </AuthProvider>
+    </I18nProvider>
   )
 }

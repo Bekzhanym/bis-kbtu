@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useI18n } from '../lib/i18n'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, ProgressPanel } from '../components/Field'
@@ -13,6 +14,7 @@ import { useLoad } from '../lib/useLoad'
 import { useMonth } from '../lib/useMonth'
 
 export function DashboardPage() {
+  const { t } = useI18n()
   const { user } = useAuth()
   const toast = useToast()
   const [month, setMonth] = useMonth()
@@ -41,8 +43,8 @@ export function DashboardPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Привет, {user?.full_name.split(' ')[0]}</h1>
-          <p className="muted">Сводка семейного бюджета за месяц</p>
+          <h1>{t('dashboard.hello')}, {user?.full_name.split(' ')[0]}</h1>
+          <p className="muted">{t('dashboard.subtitle')}</p>
         </div>
         <MonthPicker value={month} onChange={setMonth} />
       </div>

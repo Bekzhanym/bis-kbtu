@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useI18n } from '../lib/i18n'
 import { api, tokenStore } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, Field } from '../components/Field'
@@ -8,6 +9,7 @@ import { hasErrors, validatePasswordChange, validateProfile, type Errors } from 
 type Msg = { kind: 'success' | 'error'; text: string } | null
 
 export function ProfilePage() {
+  const { t } = useI18n()
   const { user, setUser } = useAuth()
   const [profile, setProfile] = useState({ full_name: user?.full_name ?? '', email: user?.email ?? '' })
   const [pErrors, setPErrors] = useState<Errors>({})
@@ -54,8 +56,8 @@ export function ProfilePage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Профиль</h1>
-          <p className="muted">Роль: <span className={`badge badge-${user?.role}`}>{user?.role === 'admin' ? 'администратор' : 'участник'}</span></p>
+          <h1>{t('profile.title')}</h1>
+          <p className="muted">{t('profile.role')}: <span className={`badge badge-${user?.role}`}>{user?.role === 'admin' ? t('role.admin') : t('role.member')}</span></p>
         </div>
       </div>
       <div className="grid-2">

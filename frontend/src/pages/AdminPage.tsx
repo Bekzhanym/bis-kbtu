@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useI18n } from '../lib/i18n'
 import { api } from '../api/client'
 import type { Budget, Category } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
@@ -13,13 +14,14 @@ type Tab = 'categories' | 'budgets' | 'users'
 type Msg = { kind: 'success' | 'error'; text: string } | null
 
 export function AdminPage() {
+  const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('budgets')
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>Управление</h1>
-          <p className="muted">Доступно только администраторам семьи</p>
+          <h1>{t('admin.title')}</h1>
+          <p className="muted">{t('admin.subtitle')}</p>
         </div>
       </div>
       <div className="tabs">

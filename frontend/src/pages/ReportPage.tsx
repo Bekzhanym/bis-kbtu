@@ -1,4 +1,5 @@
 import { api } from '../api/client'
+import { useI18n } from '../lib/i18n'
 import { Alert, ProgressPanel } from '../components/Field'
 import { MonthPicker } from '../components/MonthPicker'
 import { kzt, monthLabel, monthStart } from '../lib/format'
@@ -7,6 +8,7 @@ import { useLoad } from '../lib/useLoad'
 import { useMonth } from '../lib/useMonth'
 
 export function ReportPage() {
+  const { t } = useI18n()
   const [month, setMonth] = useMonth()
   const report = useLoad(() => api.monthlyReport(monthStart(month)), [month])
   const compare = useLoad(() => api.compareMonths(monthStart(month)), [month])
@@ -18,8 +20,8 @@ export function ReportPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Месячный отчёт</h1>
-          <p className="muted">Общие итоги семьи. Email и заметки в отчёт не попадают.</p>
+          <h1>{t('report.title')}</h1>
+          <p className="muted">{t('report.subtitle')}</p>
         </div>
         <MonthPicker value={month} onChange={setMonth} />
       </div>

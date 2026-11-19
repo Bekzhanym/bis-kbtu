@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useI18n } from '../lib/i18n'
 import { api } from '../api/client'
 import type { Transaction } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
@@ -17,6 +18,7 @@ import { normalizeAmount, validateAmount } from '../lib/validation'
 type Mode = 'none' | 'add' | 'split'
 
 export function TransactionsPage() {
+  const { t } = useI18n()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const [month, setMonth] = useMonth()
@@ -86,8 +88,8 @@ export function TransactionsPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Расходы</h1>
-          <p className="muted">{scope === 'mine' ? 'Ваши расходы. Заметки видны только вам.' : 'Все расходы семьи. Чужие заметки скрыты.'}</p>
+          <h1>{t('transactions.title')}</h1>
+          <p className="muted">{scope === 'mine' ? t('transactions.mine') : t('transactions.all')}</p>
         </div>
         <div className="row-gap">
           <button className={`btn ${mode === 'add' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode(mode === 'add' ? 'none' : 'add')}>+ Расход</button>
@@ -154,7 +156,7 @@ export function TransactionsPage() {
 
         {list.error && <Alert>{list.error}</Alert>}
         <div className="table-wrap">
-          <table>
+          <table className="stack-mobile">
             <thead>
               <tr>
                 <th>Дата</th>
@@ -181,11 +183,11 @@ export function TransactionsPage() {
                 </tr>
               ) : (
                 <tr key={t.transaction_id}>
-                  <td>{dateLabel(t.transaction_date)}</td>
-                  {scope === 'all' && <td>{t.user_full_name}</td>}
-                  <td><span className="cat-icon" aria-hidden>{categoryIcon(t.category_name)}</span>{t.category_name}</td>
-                  <td className="muted">{t.is_mine ? t.note ?? '' : '🔒'}</td>
-                  <td className="num">{kzt(t.amount)}</td>
+                  <td data-label="Дата">{dateLabel(t.transaction_date)}</td>
+                  {scope === 'all' && <td data-label="Кто">{t.user_full_name}</td>}
+                  <td data-label="Категория" className="cell-title"><span className="cat-icon" aria-hidden>{categoryIcon(t.category_name)}</span>{t.category_name}</td>
+                  <td data-label="Заметка" className={`muted ${t.is_mine && !t.note ? 'cell-empty' : ''}`}>{t.is_mine ? t.note ?? '' : '🔒'}</td>
+                  <td data-label="Сумма" className="num cell-amount">{kzt(t.amount)}</td>
                   <td className="actions">
                     {t.is_mine && (
                       <>
