@@ -54,6 +54,7 @@ const MESSAGES: Record<string, string> = {
   'Database constraint violated': 'Данные нарушают ограничения базы данных',
   'Invalid refresh token': 'Сессия истекла, войдите снова',
   'Telegram bot is not configured': 'Telegram-бот ещё не настроен на сервере',
+  'Telegram is not linked': 'Сначала подключите Telegram',
   'Value error, Expense date cannot be in the future': 'Дата расхода не может быть в будущем',
   'Value error, Password must contain letters and digits': 'Пароль должен содержать буквы и цифры',
 }
@@ -172,6 +173,7 @@ export const api = {
   telegramStatus: () => request<TelegramStatus>('/api/telegram/status'),
   telegramLink: () => request<{ code: string; url: string | null; expires_in: number }>('/api/telegram/link', { method: 'POST' }),
   telegramUnlink: () => request<void>('/api/telegram/link', { method: 'DELETE' }),
+  telegramTest: () => request<{ sent: number }>('/api/telegram/test', { method: 'POST' }),
 
   compareMonths: (month: string, withMonth?: string) =>
     request<MonthCompare>('/api/reports/compare', { query: { month, with: withMonth } }),

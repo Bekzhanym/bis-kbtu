@@ -45,6 +45,21 @@ def _send(chat_id: int, text: str) -> None:
     send_message(chat_id, text)
 
 
+def period_label(start: date) -> str:
+    return f"{MONTHS[start.month - 1]} {start.year}"
+
+
+# Message templates: used by real notifications and by the "send examples" button
+def warning_text(category: str, period: str, spent: Decimal, limit: Decimal) -> str:
+    return (f"🔔 По категории «{category}» потрачено {money(spent)} из {money(limit)} "
+            f"({round(spent / limit * 100)}%) за {period}.")
+
+
+def exceeded_text(category: str, period: str, spent: Decimal, limit: Decimal, author: str) -> str:
+    return (f"⚠️ Лимит «{category}» на {period} превышен: {money(spent)} из {money(limit)}. "
+            f"Последний расход добавил(а) {author}.")
+
+
 def threshold_crossed(before: Decimal, after: Decimal, limit: Decimal) -> int | None:
     """100 if this expense pushed spending over the limit, 80 if over 80%, else None."""
     if before <= limit < after:
@@ -77,13 +92,11 @@ def notify_limits(added: list[tuple[int, int, date, Decimal]]) -> None:
                 continue
             author = db.get(models.User, user_id)
             name = budget.category.category_name
-            period = f"{MONTHS[start.month - 1]} {start.year}"
+            period = period_label(start)
             if level == 100:
-                text = (f"⚠️ Лимит «{name}» на {period} превышен: {money(after)} из {money(budget.monthly_limit)}. "
-                        f"Последний расход добавил(а) {author.full_name}.")
+                text = exceeded_text(name, period, after, budget.monthly_limit, author.full_name)
             else:
-                text = (f"🔔 По категории «{name}» потрачено {money(after)} из {money(budget.monthly_limit)} "
-                        f"({round(after / budget.monthly_limit * 100)}%) за {period}.")
+                text = warning_text(name, period, after, budget.monthly_limit)
             # the author and every admin, each chat once
             admin_ids = [u for (u,) in db.query(models.User.user_id).filter(models.User.role == "admin")]
             links = db.query(models.TelegramLink).filter(

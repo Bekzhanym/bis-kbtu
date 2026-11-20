@@ -304,3 +304,13 @@ def test_threshold_crossed():
     assert threshold_crossed(D(70), D(85), D(100)) == 80
     assert threshold_crossed(D(85), D(90), D(100)) is None
     assert threshold_crossed(D(110), D(120), D(100)) is None
+
+
+def test_send_example_notifications(client, member, tg):
+    assert client.post("/api/telegram/test", headers=member).status_code == 400  # not linked yet
+    _connect(client, member, 4242)
+    tg.clear()
+    r = client.post("/api/telegram/test", headers=member)
+    assert r.status_code == 200 and r.json()["sent"] == len(tg) == 7
+    assert all(chat == 4242 and text.startswith("[пример]") for chat, text in tg)
+    assert any("превышен" in t for _, t in tg) and any("🔔" in t for _, t in tg)

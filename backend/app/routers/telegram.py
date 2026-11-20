@@ -1,5 +1,6 @@
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -47,6 +48,31 @@ def unlink(user: models.User = Depends(get_current_user), db: Session = Depends(
     db.commit()
 
 
+def linked_text(full_name: str) -> str:
+    return f"Готово, {full_name}! Сюда будут приходить уведомления о лимитах бюджета. Отключить: /stop"
+
+
+@router.post("/test")
+def send_examples(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Send one example of every bot message to the user's linked chat (for demos and screenshots)."""
+    link = db.get(models.TelegramLink, user.user_id)
+    if not link:
+        raise HTTPException(400, "Telegram is not linked")
+    period = telegram.period_label(date.today().replace(day=1))
+    examples = [
+        linked_text(user.full_name),
+        telegram.warning_text("Food", period, Decimal("82000"), Decimal("100000")),
+        telegram.exceeded_text("Food", period, Decimal("110000"), Decimal("100000"), user.full_name),
+        telegram.warning_text("Transport", period, Decimal("33500"), Decimal("40000")),
+        telegram.exceeded_text("Entertainment", period, Decimal("31200"), Decimal("30000"), user.full_name),
+        HELP,
+        "Уведомления отключены.",
+    ]
+    for text in examples:
+        telegram._send(link.chat_id, f"[пример] {text}")
+    return {"sent": len(examples)}
+
+
 def _link(db: Session, chat_id: int, code: str) -> str:
     row = db.get(models.TelegramLinkCode, code)
     if not row or row.expires_at < _now():
@@ -62,7 +88,7 @@ def _link(db: Session, chat_id: int, code: str) -> str:
     db.delete(row)  # one-time code
     db.commit()
     user = db.get(models.User, row.user_id)
-    return f"Готово, {user.full_name}! Сюда будут приходить уведомления о лимитах бюджета. Отключить: /stop"
+    return linked_text(user.full_name)
 
 
 @router.post("/webhook", include_in_schema=False)

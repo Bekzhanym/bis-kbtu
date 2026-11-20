@@ -21,6 +21,15 @@ export function TelegramCard() {
     }
   }
 
+  async function sendExamples() {
+    try {
+      const res = await api.telegramTest()
+      toast(`Отправлено примеров: ${res.sent}. Проверьте Telegram.`)
+    } catch (e) {
+      toast((e as Error).message, { kind: 'error' })
+    }
+  }
+
   async function disconnect() {
     await api.telegramUnlink()
     setCode(null)
@@ -33,13 +42,15 @@ export function TelegramCard() {
       <h2>Уведомления в Telegram</h2>
       <p className="muted small">
         Бот напишет, когда по категории потрачено 80% лимита и когда лимит превышен.
-        Сообщения получают автор расхода и администраторы семьи.
+        Сообщения получают автор расхода и администраторы семьи. Бота можно добавить и в общий семейный чат:
+        отправьте там <code>/start КОД</code>.
       </p>
       {status.error && <Alert>{status.error}</Alert>}
       {s && !s.enabled && <Alert kind="warning">Бот пока не настроен на сервере (нет TELEGRAM_BOT_TOKEN).</Alert>}
       {s?.enabled && (s.linked ? (
         <div className="row-gap">
           <span className="badge badge-ok">Подключено</span>
+          <button className="btn btn-primary btn-sm" onClick={sendExamples}>Отправить примеры уведомлений</button>
           <button className="btn btn-ghost btn-sm" onClick={disconnect}>Отключить</button>
         </div>
       ) : (
