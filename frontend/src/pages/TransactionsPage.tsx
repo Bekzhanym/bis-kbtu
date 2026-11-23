@@ -7,6 +7,7 @@ import { Alert, Field, MoneyInput } from '../components/Field'
 import { EmptyState, Skeleton, useToast } from '../components/Feedback'
 import { categoryIcon } from '../lib/categories'
 import { MonthPicker } from '../components/MonthPicker'
+import { KaspiImport } from '../components/KaspiImport'
 import { RecurringSection } from '../components/RecurringSection'
 import { SplitForm } from '../components/SplitForm'
 import { TransactionForm } from '../components/TransactionForm'
@@ -16,7 +17,7 @@ import { useLoad } from '../lib/useLoad'
 import { useMonth } from '../lib/useMonth'
 import { normalizeAmount, validateAmount } from '../lib/validation'
 
-type Mode = 'none' | 'add' | 'split'
+type Mode = 'none' | 'add' | 'split' | 'import'
 
 export function TransactionsPage() {
   const { t } = useI18n()
@@ -95,6 +96,7 @@ export function TransactionsPage() {
         <div className="row-gap">
           <button className={`btn ${mode === 'add' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode(mode === 'add' ? 'none' : 'add')}>+ Расход</button>
           <button className={`btn ${mode === 'split' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode(mode === 'split' ? 'none' : 'split')}>Разделить чек</button>
+          <button className={`btn ${mode === 'import' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setMode(mode === 'import' ? 'none' : 'import')}>Импорт из Kaspi</button>
         </div>
       </div>
 
@@ -106,6 +108,12 @@ export function TransactionsPage() {
             toast('Расход сохранён')
             await list.reload()
           }} />
+        </section>
+      )}
+      {mode === 'import' && categories.data && (
+        <section className="section">
+          <h2>Импорт выписки Kaspi Gold</h2>
+          <KaspiImport categories={categories.data} onDone={() => { setMode('none'); void list.reload() }} />
         </section>
       )}
       {mode === 'split' && categories.data && (

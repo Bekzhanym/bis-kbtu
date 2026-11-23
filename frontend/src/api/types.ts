@@ -86,3 +86,14 @@ export type Recurring = {
   is_active: boolean
 }
 export type RecurringInput = { category_id: number; amount: string; day_of_month: number; note: string | null }
+
+export type ImportRow = {
+  transaction_date: string
+  amount: string
+  operation: string
+  details: string
+  category_id: number | null
+  selected: boolean
+  duplicate: boolean
+}
+export type ImportPreview = { rows: ImportRow[]; skipped_income: number }

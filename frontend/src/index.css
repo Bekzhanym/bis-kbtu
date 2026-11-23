@@ -331,3 +331,9 @@ tfoot td { font-weight: 700; border-bottom: 0; background: var(--grey); }
   table.stack-mobile tfoot tr { display: flex; justify-content: space-between; }
   table.stack-mobile tfoot td { display: block; width: auto; }
 }
+
+/* ---------- bank import ---------- */
+.import-box { max-width: none; }
+.file-btn { align-self: flex-start; display: inline-block; }
+.check { width: 22px; height: 22px; accent-color: var(--magenta); }
+.import-box td select { height: 40px; font-size: 16px; min-width: 160px; }

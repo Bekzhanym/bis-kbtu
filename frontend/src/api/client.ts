@@ -1,5 +1,5 @@
 import type {
-  Budget, Category, MonthCompare, MonthlyReport, Recurring, RecurringInput, Role, TelegramStatus, TokenResponse, Transaction, TransactionInput, User,
+  Budget, Category, ImportPreview, MonthCompare, MonthlyReport, Recurring, RecurringInput, Role, TelegramStatus, TokenResponse, Transaction, TransactionInput, User,
 } from './types'
 
 const TOKEN_KEY = 'fbt_token'
@@ -55,6 +55,10 @@ const MESSAGES: Record<string, string> = {
   'Invalid refresh token': 'Сессия истекла, войдите снова',
   'Telegram bot is not configured': 'Telegram-бот ещё не настроен на сервере',
   'Telegram is not linked': 'Сначала подключите Telegram',
+  'Not a PDF file': 'Это не PDF-файл',
+  'Could not read the PDF': 'Не получилось прочитать PDF',
+  'File is larger than 5 MB': 'Файл больше 5 МБ',
+  'No Kaspi expenses found in this file': 'В файле не найдено расходов Kaspi. Это выписка Kaspi Gold?',
   'Value error, Expense date cannot be in the future': 'Дата расхода не может быть в будущем',
   'Value error, Password must contain letters and digits': 'Пароль должен содержать буквы и цифры',
 }
@@ -67,7 +71,7 @@ function messageFrom(detail: unknown, fallback: string): string {
   return fallback
 }
 
-type Options = { method?: string; body?: unknown; query?: Record<string, string | number | undefined | null> }
+type Options = { method?: string; body?: unknown; file?: Blob; query?: Record<string, string | number | undefined | null> }
 
 // One refresh at a time: if several requests get 401 together, they all wait for the same call
 let refreshing: Promise<boolean> | null = null
@@ -92,7 +96,7 @@ function refreshTokens(): Promise<boolean> {
 }
 
 async function request<T>(path: string, opts: Options = {}, retried = false): Promise<T> {
-  const { method = 'GET', body, query } = opts
+  const { method = 'GET', body, file, query } = opts
   const params = new URLSearchParams()
   for (const [k, v] of Object.entries(query ?? {})) {
     if (v !== undefined && v !== null && v !== '') params.set(k, String(v))
@@ -101,11 +105,12 @@ async function request<T>(path: string, opts: Options = {}, retried = false): Pr
   const token = tokenStore.get()
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (file) headers['Content-Type'] = file.type || 'application/octet-stream'
   if (token) headers.Authorization = `Bearer ${token}`
 
   let res: Response
   try {
-    res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    res = await fetch(url, { method, headers, body: file ?? (body === undefined ? undefined : JSON.stringify(body)) })
   } catch {
     throw new ApiError(0, 'Сервер недоступен. Запущен ли backend?')
   }
@@ -158,6 +163,11 @@ export const api = {
   updateTransaction: (id: number, data: Partial<TransactionInput>) =>
     request<Transaction>(`/api/transactions/${id}`, { method: 'PATCH', body: data }),
   deleteTransaction: (id: number) => request<void>(`/api/transactions/${id}`, { method: 'DELETE' }),
+
+  // bank statement import: the PDF is sent as the request body
+  importKaspi: (file: Blob) => request<ImportPreview>('/api/import/kaspi', { method: 'POST', file }),
+  confirmImport: (items: TransactionInput[]) =>
+    request<Transaction[]>('/api/import/confirm', { method: 'POST', body: { items } }),
 
   // recurring expenses
   recurring: () => request<Recurring[]>('/api/recurring'),

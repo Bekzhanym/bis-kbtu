@@ -231,3 +231,23 @@ class RecurringOut(BaseModel):
     day_of_month: int
     note: str | None
     is_active: bool
+
+
+# ---------- bank statement import ----------
+class ImportRow(BaseModel):
+    transaction_date: date
+    amount: Decimal
+    operation: str
+    details: str
+    category_id: int | None
+    selected: bool
+    duplicate: bool  # the same date and amount is already among your expenses
+
+
+class ImportPreview(BaseModel):
+    rows: list[ImportRow]
+    skipped_income: int
+
+
+class ImportConfirm(BaseModel):
+    items: list[TransactionIn] = Field(min_length=1, max_length=500)

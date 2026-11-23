@@ -388,3 +388,59 @@ def test_report_commands_need_a_linked_chat(client, member, tg):
     texts = [t for _, t in tg[-5:]]
     assert texts[0].startswith("📊 Отчёт за неделю") and texts[1].startswith("📊 Отчёт за месяц")
     assert texts[2].startswith("📊 Отчёт за год") and texts[3].startswith("🎯 Лимиты") and "/limits" in texts[4]
+
+
+# ---------- Kaspi statement import (24B031677) ----------
+KASPI_TEXT = """Выписка по Kaspi Gold за период с 01.10.26 по 31.10.26
+Дата Сумма Операция Детали
+01.10.26 + 250 000,00 ₸ Пополнение С Kaspi Депозита
+03.10.26 - 65 000,00 ₸ Покупка MAGNUM CASH&CARRY
+05.10.26 - 2 300,00 ₸ Покупка Yandex.Go
+07.10.26 - 4 500,00 ₸ Покупка Kinopark 7 IMAX
+09.10.26 - 10 000,00 ₸ Перевод Айгерим Б.
+12.10.26 - 1 990,50 ₸ Покупка ИП Цветы
+"""
+
+
+def test_parse_kaspi_statement():
+    from datetime import date
+    from decimal import Decimal
+
+    from app.bank_import import parse_statement
+    rows = parse_statement(KASPI_TEXT)
+    assert [(r.date, r.amount, r.category_name, r.selected) for r in rows] == [
+        (date(2026, 10, 3), Decimal("65000.00"), "Food", True),
+        (date(2026, 10, 5), Decimal("2300.00"), "Transport", True),
+        (date(2026, 10, 7), Decimal("4500.00"), "Entertainment", True),
+        (date(2026, 10, 9), Decimal("10000.00"), None, False),  # transfer: unticked by default
+        (date(2026, 10, 12), Decimal("1990.50"), None, True),
+    ]
+
+
+def test_kaspi_import_preview_and_confirm(client, member, monkeypatch):
+    from app.routers import bank_import
+    monkeypatch.setattr(bank_import, "extract_text", lambda pdf: KASPI_TEXT)
+    pdf = {"headers": {**member, "Content-Type": "application/pdf"}}
+    assert client.post("/api/import/kaspi", content=b"hello", **pdf).status_code == 400
+    r = client.post("/api/import/kaspi", content=b"%PDF-1.4 fake", **pdf)
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["skipped_income"] == 1 and len(data["rows"]) == 5
+    # Dana already has 45 000 on 10.10 in the seed data, not 65 000 on 03.10: no duplicate there
+    first = data["rows"][0]
+    assert first["category_id"] == 1 and first["duplicate"] is False
+    items = [{"category_id": row["category_id"] or 1, "amount": row["amount"],
+              "transaction_date": row["transaction_date"], "note": row["details"]}
+             for row in data["rows"] if row["selected"]]
+    saved = client.post("/api/import/confirm", json={"items": items}, headers=member)
+    assert saved.status_code == 201 and len(saved.json()) == 4
+    # importing the same statement again: everything is marked as a duplicate and unticked
+    again = client.post("/api/import/kaspi", content=b"%PDF-1.4 fake", **pdf).json()["rows"]
+    assert all(row["duplicate"] and not row["selected"] for row in again if row["operation"] == "Покупка")
+
+
+def test_kaspi_import_needs_auth_and_limits_size(client, member):
+    assert client.post("/api/import/kaspi", content=b"%PDF").status_code == 401
+    big = b"%PDF" + b"0" * (5 * 1024 * 1024)
+    r = client.post("/api/import/kaspi", content=big, headers={**member, "Content-Type": "application/pdf"})
+    assert r.status_code == 413

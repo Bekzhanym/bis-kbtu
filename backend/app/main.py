@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .core.config import CORS_ORIGINS
 from .database import Base, SessionLocal, engine
-from .routers import auth, budgets, categories, recurring, reports, telegram, transactions, users
+from .routers import auth, bank_import, budgets, categories, recurring, reports, telegram, transactions, users
 from .seed import seed
 
 
@@ -45,5 +45,5 @@ def health():
     return {"status": "ok"}
 
 
-for r in (auth, users, categories, transactions, budgets, reports, telegram, recurring):
+for r in (auth, users, categories, transactions, budgets, reports, telegram, recurring, bank_import):
     app.include_router(r.router)
