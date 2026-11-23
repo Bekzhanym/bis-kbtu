@@ -56,6 +56,15 @@ Frontend запускается после того, как backend прошёл
    ```
 4. В приложении: Профиль → «Подключить Telegram» → Start в боте.
 
+Команды бота (для привязанного чата): `/week`, `/month`, `/year` (отчёт: всего у семьи, ваши расходы, топ категорий, сравнение с прошлым периодом), `/limits` (лимиты месяца), `/help`, `/stop`.
+Чтобы команды появились в меню Telegram, один раз выполните:
+```bash
+curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setMyCommands" -H "Content-Type: application/json" -d '{"commands":[
+  {"command":"week","description":"Отчёт за неделю"},{"command":"month","description":"Отчёт за месяц"},
+  {"command":"year","description":"Отчёт за год"},{"command":"limits","description":"Лимиты по категориям"},
+  {"command":"help","description":"Список команд"},{"command":"stop","description":"Отключить уведомления"}]}'
+```
+
 Без токена бот просто выключен, остальное приложение работает как обычно.
 
 ## Права доступа

@@ -5,7 +5,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from .. import models, telegram
+from .. import bot_reports, models, telegram
 from ..core.config import TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME, TELEGRAM_WEBHOOK_SECRET
 from ..database import get_db
 from ..deps import get_current_user
@@ -21,6 +21,15 @@ def _now() -> datetime:
 
 HELP = ("Это бот Family Budget Tracker. Чтобы получать уведомления о лимитах, "
         "откройте Профиль на сайте и нажмите «Подключить Telegram».")
+
+COMMANDS = ("Команды:\n"
+            "/week — отчёт за неделю\n"
+            "/month — отчёт за месяц\n"
+            "/year — отчёт за год\n"
+            "/limits — лимиты по категориям\n"
+            "/stop — отключить уведомления")
+
+NOT_LINKED = "Этот чат ещё не привязан. Откройте Профиль на сайте → «Подключить Telegram»."
 
 
 @router.get("/status")
@@ -66,6 +75,7 @@ def send_examples(user: models.User = Depends(get_current_user), db: Session = D
         telegram.warning_text("Transport", period, Decimal("33500"), Decimal("40000")),
         telegram.exceeded_text("Entertainment", period, Decimal("31200"), Decimal("30000"), user.full_name),
         HELP,
+        COMMANDS,
         "Уведомления отключены.",
     ]
     for text in examples:
@@ -103,9 +113,21 @@ async def webhook(request: Request, db: Session = Depends(get_db),
     if not chat_id:
         return {"ok": True}  # other update types are ignored
 
-    if text.startswith("/start") and len(text.split()) == 2:
+    # in groups Telegram sends "/week@budgetKBTUbot"
+    command = text.split()[0].split("@")[0].lower() if text else ""
+    link = db.query(models.TelegramLink).filter_by(chat_id=chat_id).first()
+    if command == "/start" and len(text.split()) == 2:
         reply = _link(db, chat_id, text.split()[1])
-    elif text == "/stop":
+    elif command in ("/week", "/month", "/year", "/limits"):
+        if not link:
+            reply = NOT_LINKED
+        elif command == "/limits":
+            reply = bot_reports.limits_report(db)
+        else:
+            reply = bot_reports.period_report(db, db.get(models.User, link.user_id), command[1:])
+    elif command == "/help" or (command == "/start" and link):
+        reply = COMMANDS if link else HELP
+    elif command == "/stop":
         deleted = db.query(models.TelegramLink).filter_by(chat_id=chat_id).delete()
         db.commit()
         reply = "Уведомления отключены." if deleted else "Этот чат не был привязан."

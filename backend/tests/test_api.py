@@ -311,7 +311,7 @@ def test_send_example_notifications(client, member, tg):
     _connect(client, member, 4242)
     tg.clear()
     r = client.post("/api/telegram/test", headers=member)
-    assert r.status_code == 200 and r.json()["sent"] == len(tg) == 7
+    assert r.status_code == 200 and r.json()["sent"] == len(tg) == 8
     assert all(chat == 4242 and text.startswith("[пример]") for chat, text in tg)
     assert any("превышен" in t for _, t in tg) and any("🔔" in t for _, t in tg)
 
@@ -348,3 +348,43 @@ def test_recurring_validation_and_privacy(client, member, admin):
     r = client.patch(f"/api/recurring/{rid}", json={"is_active": False}, headers=member)
     assert r.json()["is_active"] is False
     assert client.delete(f"/api/recurring/{rid}", headers=member).status_code == 204
+
+
+# ---------- Telegram reports: /week /month /year /limits (24B032028) ----------
+def test_period_ranges():
+    from datetime import date
+
+    from app.bot_reports import period_range
+    wed = date(2026, 11, 25)
+    assert period_range("week", wed) == (date(2026, 11, 23), date(2026, 11, 26), date(2026, 11, 16), date(2026, 11, 23))
+    assert period_range("month", wed)[0::2] == (date(2026, 11, 1), date(2026, 10, 1))
+    assert period_range("year", wed)[0::2] == (date(2026, 1, 1), date(2025, 1, 1))
+
+
+def test_month_and_limits_reports_text(client):
+    from datetime import date
+
+    from app import models
+    from app.bot_reports import limits_report, period_report
+    from app.database import SessionLocal
+    with SessionLocal() as db:
+        dana = db.query(models.User).filter_by(email="dana.m@example.com").one()
+        text = period_report(db, dana, "month", date(2026, 10, 31))
+        limits = limits_report(db, date(2026, 10, 15))
+        empty = period_report(db, dana, "week", date(2030, 1, 1))
+    assert "Семья потратила: 128 000 ₸" in text and "Ваши расходы: 45 000 ₸" in text and "• Food: 110 000 ₸" in text
+    assert "@" not in text  # no emails
+    assert "🔴 Food: 110 000 ₸ из 100 000 ₸ (110%), превышен на 10 000 ₸" in limits
+    assert "Расходов за этот период нет" in empty
+
+
+def test_report_commands_need_a_linked_chat(client, member, tg):
+    _say(client, 9090, "/month")
+    assert "ещё не привязан" in tg[-1][1]
+    _connect(client, member, 9090)
+    for cmd in ("/week", "/month@budgetKBTUbot", "/year", "/limits", "/help"):
+        _say(client, 9090, cmd)
+        assert tg[-1][0] == 9090
+    texts = [t for _, t in tg[-5:]]
+    assert texts[0].startswith("📊 Отчёт за неделю") and texts[1].startswith("📊 Отчёт за месяц")
+    assert texts[2].startswith("📊 Отчёт за год") and texts[3].startswith("🎯 Лимиты") and "/limits" in texts[4]
