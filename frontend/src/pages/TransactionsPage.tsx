@@ -7,6 +7,7 @@ import { Alert, Field, MoneyInput } from '../components/Field'
 import { EmptyState, Skeleton, useToast } from '../components/Feedback'
 import { categoryIcon } from '../lib/categories'
 import { MonthPicker } from '../components/MonthPicker'
+import { RecurringSection } from '../components/RecurringSection'
 import { SplitForm } from '../components/SplitForm'
 import { TransactionForm } from '../components/TransactionForm'
 import { SORT_LABELS, matchesSearch, sortTransactions, validateRange, type Sort } from '../lib/filters'
@@ -221,6 +222,7 @@ export function TransactionsPage() {
           </table>
         </div>
       </section>
+      {categories.data && <RecurringSection categories={categories.data} onChanged={() => void list.reload()} />}
     </>
   )
 }

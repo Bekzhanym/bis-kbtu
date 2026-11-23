@@ -200,3 +200,34 @@ class MonthCompare(BaseModel):
     diff: Decimal
     diff_pct: float | None
     categories: list[CategoryCompare]
+
+
+# ---------- recurring expenses ----------
+DayOfMonth = Annotated[int, Field(ge=1, le=28)]
+
+
+class RecurringIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    category_id: int
+    amount: Money
+    day_of_month: DayOfMonth
+    note: Note = None
+
+
+class RecurringUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    category_id: int | None = None
+    amount: Money | None = None
+    day_of_month: DayOfMonth | None = None
+    note: Note = None
+    is_active: bool | None = None
+
+
+class RecurringOut(BaseModel):
+    recurring_id: int
+    category_id: int
+    category_name: str
+    amount: Decimal
+    day_of_month: int
+    note: str | None
+    is_active: bool

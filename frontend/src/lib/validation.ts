@@ -135,3 +135,17 @@ export function validatePasswordChange(f: { current: string; next: string; confi
     confirm: f.confirm === f.next ? undefined : 'Пароли не совпадают',
   })
 }
+
+export function validateDayOfMonth(v: string): string | undefined {
+  const n = Number(v)
+  if (!v || !Number.isInteger(n) || n < 1 || n > 28) return 'День от 1 до 28'
+}
+
+export function validateRecurring(f: { category_id: string; amount: string; day_of_month: string; note: string }): Errors {
+  return collect({
+    category_id: validateCategoryId(f.category_id),
+    amount: validateAmount(f.amount),
+    day_of_month: validateDayOfMonth(f.day_of_month),
+    note: validateNote(f.note),
+  })
+}

@@ -1,5 +1,5 @@
 import type {
-  Budget, Category, MonthCompare, MonthlyReport, Role, TelegramStatus, TokenResponse, Transaction, TransactionInput, User,
+  Budget, Category, MonthCompare, MonthlyReport, Recurring, RecurringInput, Role, TelegramStatus, TokenResponse, Transaction, TransactionInput, User,
 } from './types'
 
 const TOKEN_KEY = 'fbt_token'
@@ -158,6 +158,13 @@ export const api = {
   updateTransaction: (id: number, data: Partial<TransactionInput>) =>
     request<Transaction>(`/api/transactions/${id}`, { method: 'PATCH', body: data }),
   deleteTransaction: (id: number) => request<void>(`/api/transactions/${id}`, { method: 'DELETE' }),
+
+  // recurring expenses
+  recurring: () => request<Recurring[]>('/api/recurring'),
+  createRecurring: (data: RecurringInput) => request<Recurring>('/api/recurring', { method: 'POST', body: data }),
+  updateRecurring: (id: number, data: Partial<RecurringInput & { is_active: boolean }>) =>
+    request<Recurring>(`/api/recurring/${id}`, { method: 'PATCH', body: data }),
+  deleteRecurring: (id: number) => request<void>(`/api/recurring/${id}`, { method: 'DELETE' }),
 
   // budgets
   budgets: (month?: string) => request<Budget[]>('/api/budgets', { query: { month } }),

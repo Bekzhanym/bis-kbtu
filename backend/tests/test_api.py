@@ -314,3 +314,37 @@ def test_send_example_notifications(client, member, tg):
     assert r.status_code == 200 and r.json()["sent"] == len(tg) == 7
     assert all(chat == 4242 and text.startswith("[пример]") for chat, text in tg)
     assert any("превышен" in t for _, t in tg) and any("🔔" in t for _, t in tg)
+
+
+# ---------- recurring expenses (24B032166) ----------
+def test_recurring_expense_is_created_once_a_month(client, member):
+    from datetime import date
+
+    from app.database import SessionLocal
+    from app.recurring import run_due
+    body = {"category_id": 3, "amount": "2990.00", "day_of_month": 28, "note": "Netflix"}
+    r = client.post("/api/recurring", json=body, headers=member)
+    assert r.status_code == 201 and r.json()["category_name"] == "Entertainment"
+    with SessionLocal() as db:
+        assert run_due(db, date(2030, 3, 27)) == 0  # day not reached yet
+        assert run_due(db, date(2030, 3, 28)) == 1
+        assert run_due(db, date(2030, 3, 31)) == 0  # already done this month
+        assert run_due(db, date(2030, 4, 28)) == 1  # next month again
+    rows = client.get("/api/transactions?month=2030-03-01", headers=member).json()
+    assert [(t["amount"], t["transaction_date"], t["note"]) for t in rows] == [("2990.00", "2030-03-28", "Netflix")]
+
+
+def test_recurring_validation_and_privacy(client, member, admin):
+    bad = [{"category_id": 1, "amount": "0", "day_of_month": 5},
+           {"category_id": 1, "amount": "100", "day_of_month": 31},
+           {"category_id": 1, "amount": "100", "day_of_month": 5, "user_id": 1}]
+    for b in bad:
+        assert client.post("/api/recurring", json=b, headers=member).status_code == 422
+    rid = client.post("/api/recurring", json={"category_id": 1, "amount": "100", "day_of_month": 28},
+                      headers=member).json()["recurring_id"]
+    assert client.get("/api/recurring", headers=admin).json() == []
+    assert client.patch(f"/api/recurring/{rid}", json={"amount": "5"}, headers=admin).status_code == 404
+    assert client.delete(f"/api/recurring/{rid}", headers=admin).status_code == 404
+    r = client.patch(f"/api/recurring/{rid}", json={"is_active": False}, headers=member)
+    assert r.json()["is_active"] is False
+    assert client.delete(f"/api/recurring/{rid}", headers=member).status_code == 204

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user
+from ..recurring import run_due
 from ..telegram import notify_limits
 from ..utils import month_range
 
@@ -53,6 +54,7 @@ def list_transactions(
 ):
     if scope == "all" and user.role != "admin":
         raise HTTPException(403, "Only admins can see all family expenses")
+    run_due(db)  # recurring expenses whose day has come appear in the list
     q = db.query(models.Transaction)
     if scope == "mine":
         q = q.filter(models.Transaction.user_id == user.user_id)

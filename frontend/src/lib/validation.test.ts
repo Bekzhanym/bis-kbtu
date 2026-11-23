@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   hasErrors, normalizeAmount, validateAmount, validateBudget, validateDate, validateEmail,
   validateCategoryId, validateLogin, validateMonth, validateName, validateNote, validatePassword,
-  validatePasswordChange, validateRegister, validateTransaction,
+  validateDayOfMonth, validatePasswordChange, validateRecurring, validateRegister, validateTransaction,
 } from './validation'
 
 describe('validateAmount (main action rule: amount > 0, max 2 decimals)', () => {
@@ -116,4 +116,13 @@ describe('bug fixes: thousands separator in amounts', () => {
       expect(validateAmount(input)).toBeUndefined()
     })
   it('still rejects broken input', () => expect(validateAmount('1,5,0')).toBeDefined())
+})
+
+describe('recurring expenses (24B032166)', () => {
+  it.each(['0', '29', '31', '1.5', '', 'x'])('rejects day %j', (d) => expect(validateDayOfMonth(d)).toBeDefined())
+  it.each(['1', '15', '28'])('accepts day %j', (d) => expect(validateDayOfMonth(d)).toBeUndefined())
+  it('checks the whole form', () => {
+    const e = validateRecurring({ category_id: '', amount: '-1', day_of_month: '30', note: '' })
+    expect(Object.keys(e).sort()).toEqual(['amount', 'category_id', 'day_of_month'])
+  })
 })

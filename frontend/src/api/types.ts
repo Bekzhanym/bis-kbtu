@@ -75,3 +75,14 @@ export type MonthCompare = {
 }
 
 export type TelegramStatus = { enabled: boolean; bot_username: string | null; linked: boolean }
+
+export type Recurring = {
+  recurring_id: number
+  category_id: number
+  category_name: string
+  amount: string
+  day_of_month: number
+  note: string | null
+  is_active: boolean
+}
+export type RecurringInput = { category_id: number; amount: string; day_of_month: number; note: string | null }

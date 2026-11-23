@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user
+from ..recurring import run_due
 from ..utils import month_range
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -28,6 +29,7 @@ def _spent_by_category(db: Session, start: date, end: date) -> dict[int, Decimal
 def monthly_report(month: date = Query(..., description="Any date in the month, e.g. 2026-10-01"),
                    user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Shared family totals. Contains no emails and no notes."""
+    run_due(db)
     start, end = month_range(month)
     T = models.Transaction
     in_month = (T.transaction_date >= start, T.transaction_date < end)

@@ -96,3 +96,35 @@ class TelegramLinkCode(Base):
     code: Mapped[str] = mapped_column(String(32), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", **FK), nullable=False, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class RecurringExpense(Base):
+    """A monthly payment (subscription, rent, internet...). A real transaction is created from it once a month."""
+    __tablename__ = "recurring_expenses"
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_recurring_amount"),
+        # 1..28 so the day exists in every month, including February
+        CheckConstraint("day_of_month BETWEEN 1 AND 28", name="ck_recurring_day"),
+    )
+
+    recurring_id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", **FK), nullable=False, index=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.category_id", **FK), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(200))
+    day_of_month: Mapped[int] = mapped_column(nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    category: Mapped[Category] = relationship(lazy="joined")
+
+
+class RecurringRun(Base):
+    """Marks that a recurring expense was already turned into a transaction for a month (no double charges)."""
+    __tablename__ = "recurring_runs"
+    __table_args__ = (UniqueConstraint("recurring_id", "month_start", name="uq_recurring_month"),)
+
+    run_id: Mapped[int] = mapped_column(primary_key=True)
+    recurring_id: Mapped[int] = mapped_column(ForeignKey("recurring_expenses.recurring_id", ondelete="CASCADE"),
+                                              nullable=False)
+    month_start: Mapped[date] = mapped_column(Date, nullable=False)
+    transaction_id: Mapped[int | None] = mapped_column(ForeignKey("transactions.transaction_id", ondelete="SET NULL"))
