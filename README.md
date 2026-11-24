@@ -6,6 +6,7 @@
 |---|---|
 | backend | FastAPI, SQLAlchemy, SQLite (или PostgreSQL через `DATABASE_URL`), JWT |
 | frontend | React, TypeScript, Vite, React Router |
+| mobile | Flutter (Android, iOS), см. [mobile/README.md](mobile/README.md) |
 
 ## Запуск для разработки (два терминала)
 
@@ -90,10 +91,10 @@ curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setMyCommands" -H "Content
 - `GET/POST/PATCH /api/categories` (изменение: только админ), `GET/POST/PATCH/DELETE /api/budgets` (админ), `GET /api/users`, `PATCH /api/users/{id}/role` (админ)
 
 ## Команда
-| ID | GitHub | Основная задача | Доп. задача | Неделя 12 |
-|---|---|---|---|---|
-| 24B031914 | bekzhanym | БД, запросы frontend → backend, деплой | сервер (healthcheck), индексы БД | фронт-дизайн: уведомления, загрузка, пустые состояния, иконки |
-| 24B032028 | Almas861444 | Backend: эндпоинты, авторизация | access и refresh токены, [10 требований](docs/auth-requirements.md) | Telegram-бот, уведомления о лимитах, уникальная привязка чата |
-| 24B031677 | deeeemka | GitHub, frontend: главная, регистрация, вход, расходы | фильтры (сумма от/до, поиск, сортировка), дашборд | защита от ошибок: дубликаты, лишний ноль, лимит, дата в будущем, отмена удаления |
-| 24B032010 | muenjmtst | БД: месячный отчёт, ограниченный доступ | сравнение с прошлым месяцем | геймификация: достижения, оценка бюджета, уровни |
-| 24B032166 | mukhamedzhannn | Тестирование frontend-валидации | CI, [10 тест-репортов](docs/test-reports.md) | мобильная версия, языки (рус, қаз, eng) |
+| ID | GitHub | Основная задача | Доп. задача | Неделя 12 | Неделя 13 |
+|---|---|---|---|---|---|
+| 24B031914 | bekzhanym | БД, запросы frontend → backend, деплой | сервер (healthcheck), индексы БД | фронт-дизайн: уведомления, загрузка, пустые состояния, иконки | Flutter-приложение, часть 1 (`mobile/`) |
+| 24B032028 | Almas861444 | Backend: эндпоинты, авторизация | access и refresh токены, [10 требований](docs/auth-requirements.md) | Telegram-бот, уведомления о лимитах, уникальная привязка чата | Telegram: `/week`, `/month`, `/year`, `/limits` |
+| 24B031677 | deeeemka | GitHub, frontend: главная, регистрация, вход, расходы | фильтры (сумма от/до, поиск, сортировка), дашборд | защита от ошибок: дубликаты, лишний ноль, лимит, дата в будущем, отмена удаления | импорт выписки Kaspi (PDF) |
+| 24B032010 | muenjmtst | БД: месячный отчёт, ограниченный доступ | сравнение с прошлым месяцем | геймификация: достижения, оценка бюджета, уровни | ИИ-помощник (Claude) |
+| 24B032166 | mukhamedzhannn | Тестирование frontend-валидации | CI, [10 тест-репортов](docs/test-reports.md) | мобильная версия, языки (рус, қаз, eng) | регулярные платежи |
