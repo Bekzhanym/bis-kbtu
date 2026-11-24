@@ -5,6 +5,7 @@ import { I18nProvider } from './lib/i18n'
 import { Layout } from './components/Layout'
 import { GuestOnly, RequireAuth } from './components/RequireAuth'
 import { AdminPage } from './pages/AdminPage'
+import { AssistantPage } from './pages/AssistantPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -25,6 +26,7 @@ export default function App() {
             <Route index element={<DashboardPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="report" element={<ReportPage />} />
+            <Route path="assistant" element={<AssistantPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="admin" element={<RequireAuth admin><AdminPage /></RequireAuth>} />
           </Route>

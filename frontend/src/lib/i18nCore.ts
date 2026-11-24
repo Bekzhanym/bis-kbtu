@@ -8,7 +8,7 @@ export const LANGS: { code: Lang; label: string; locale: string }[] = [
 
 export const ru = {
   'app.title': 'Семейный бюджет',
-  'nav.home': 'Главная', 'nav.transactions': 'Расходы', 'nav.report': 'Отчёт', 'nav.admin': 'Управление', 'nav.profile': 'Профиль',
+  'nav.home': 'Главная', 'nav.transactions': 'Расходы', 'nav.report': 'Отчёт', 'nav.assistant': 'Помощник', 'nav.admin': 'Управление', 'nav.profile': 'Профиль',
   'header.logout': 'Выйти', 'header.language': 'Язык',
   'month.prev': 'Предыдущий месяц', 'month.next': 'Следующий месяц',
   'login.title': 'Вход', 'login.subtitle': 'Family Budget Tracker: семейные расходы и лимиты по месяцам',
@@ -31,7 +31,7 @@ export type Key = keyof typeof ru
 
 const kk: Partial<Record<Key, string>> = {
   'app.title': 'Отбасылық бюджет',
-  'nav.home': 'Басты бет', 'nav.transactions': 'Шығындар', 'nav.report': 'Есеп', 'nav.admin': 'Басқару', 'nav.profile': 'Профиль',
+  'nav.home': 'Басты бет', 'nav.transactions': 'Шығындар', 'nav.report': 'Есеп', 'nav.assistant': 'Көмекші', 'nav.admin': 'Басқару', 'nav.profile': 'Профиль',
   'header.logout': 'Шығу', 'header.language': 'Тіл',
   'month.prev': 'Алдыңғы ай', 'month.next': 'Келесі ай',
   'login.title': 'Кіру', 'login.subtitle': 'Family Budget Tracker: отбасы шығындары мен айлық лимиттер',
@@ -53,7 +53,7 @@ const kk: Partial<Record<Key, string>> = {
 
 const en: Partial<Record<Key, string>> = {
   'app.title': 'Family budget',
-  'nav.home': 'Home', 'nav.transactions': 'Expenses', 'nav.report': 'Report', 'nav.admin': 'Manage', 'nav.profile': 'Profile',
+  'nav.home': 'Home', 'nav.transactions': 'Expenses', 'nav.report': 'Report', 'nav.assistant': 'Assistant', 'nav.admin': 'Manage', 'nav.profile': 'Profile',
   'header.logout': 'Log out', 'header.language': 'Language',
   'month.prev': 'Previous month', 'month.next': 'Next month',
   'login.title': 'Log in', 'login.subtitle': 'Family Budget Tracker: family expenses and monthly limits',

@@ -251,3 +251,12 @@ class ImportPreview(BaseModel):
 
 class ImportConfirm(BaseModel):
     items: list[TransactionIn] = Field(min_length=1, max_length=500)
+
+
+# ---------- AI assistant ----------
+class AssistantIn(BaseModel):
+    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=500)]
+
+
+class AssistantOut(BaseModel):
+    answer: str

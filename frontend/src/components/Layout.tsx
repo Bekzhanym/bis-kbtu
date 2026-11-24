@@ -32,6 +32,7 @@ export function Layout() {
     { to: '/', icon: '🏠', label: t('nav.home'), end: true },
     { to: '/transactions', icon: '🧾', label: t('nav.transactions') },
     { to: '/report', icon: '📊', label: t('nav.report') },
+    { to: '/assistant', icon: '✨', label: t('nav.assistant') },
     ...(user?.role === 'admin' ? [{ to: '/admin', icon: '⚙️', label: t('nav.admin') }] : []),
     { to: '/profile', icon: '👤', label: t('nav.profile') },
   ]

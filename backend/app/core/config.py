@@ -14,3 +14,6 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")  # without @, used for t.me links
 # Telegram sends this value in X-Telegram-Bot-Api-Secret-Token, so nobody else can call the webhook
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+
+# AI assistant (Claude API). Without a key the assistant is switched off.
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")

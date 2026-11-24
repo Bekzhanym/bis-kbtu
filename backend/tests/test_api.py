@@ -444,3 +444,76 @@ def test_kaspi_import_needs_auth_and_limits_size(client, member):
     big = b"%PDF" + b"0" * (5 * 1024 * 1024)
     r = client.post("/api/import/kaspi", content=big, headers={**member, "Content-Type": "application/pdf"})
     assert r.status_code == 413
+
+
+# ---------- AI assistant (24B032010) ----------
+@pytest.fixture()
+def ai(monkeypatch):
+    """Claude call captured instead of sent."""
+    from app import assistant
+    calls = []
+
+    def fake(system, question):
+        calls.append((system, question))
+        return "Перерасход по Food: 10 000 ₸."
+    monkeypatch.setattr(assistant, "call_claude", fake)
+    assistant._recent.clear()
+    return calls
+
+
+def test_assistant_answers_with_family_context(client, member, ai):
+    client.post("/api/transactions", json={**TX, "note": "секретная заметка"}, headers=member)
+    r = client.post("/api/assistant", json={"question": "Где я перерасходую?"}, headers=member)
+    assert r.status_code == 200 and r.json()["answer"].startswith("Перерасход")
+    system, question = ai[0]
+    assert question == "Где я перерасходую?"
+    assert "Food" in system and "лимит" in system
+    # privacy: no emails and no notes (own or others') in what goes to the model
+    assert "@" not in system and "секретная" not in system and "Supermarket" not in system
+
+
+def test_assistant_validation_and_rate_limit(client, member, ai):
+    assert client.post("/api/assistant", json={"question": "x"}, headers=member).status_code == 422
+    assert client.post("/api/assistant", json={"question": "a" * 501}, headers=member).status_code == 422
+    assert client.post("/api/assistant", json={"question": "ok?"}).status_code == 401
+    codes = [client.post("/api/assistant", json={"question": "Сколько осталось?"}, headers=member).status_code
+             for _ in range(21)]
+    assert codes[:20] == [200] * 20 and codes[20] == 429
+
+
+def test_assistant_without_key_is_off(client, member, monkeypatch):
+    from app import assistant
+    from app.core import config
+    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "")
+    assistant._recent.clear()
+    assert client.get("/api/assistant/status", headers=member).json() == {"enabled": False}
+    r = client.post("/api/assistant", json={"question": "Сколько осталось?"}, headers=member)
+    assert r.status_code == 503
+
+
+def test_call_claude_request_shape_and_refusal(monkeypatch):
+    from types import SimpleNamespace
+
+    import anthropic
+
+    from app import assistant
+    from app.core import config
+    sent = {}
+    reply = {"stop_reason": "end_turn"}
+
+    class FakeClient:
+        def __init__(self, **kw):
+            self.beta = SimpleNamespace(messages=SimpleNamespace(create=self.create))
+
+        def create(self, **kw):
+            sent.update(kw)
+            return SimpleNamespace(stop_reason=reply["stop_reason"],
+                                   content=[SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text=" Ответ ")])
+    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(anthropic, "Anthropic", FakeClient)
+    assert assistant.call_claude("SYS", "Q") == "Ответ"
+    assert sent["model"] == "claude-opus-5-5" and sent["fallbacks"] == "default"
+    assert sent["betas"] == ["server-side-fallback-2026-07-01"] and sent["system"] == "SYS"
+    assert "thinking" not in sent  # always on for this model; sending "disabled" would be a 400
+    reply["stop_reason"] = "refusal"
+    assert "не могу ответить" in assistant.call_claude("SYS", "Q")

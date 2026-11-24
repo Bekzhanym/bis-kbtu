@@ -56,6 +56,9 @@ const MESSAGES: Record<string, string> = {
   'Telegram bot is not configured': 'Telegram-бот ещё не настроен на сервере',
   'Telegram is not linked': 'Сначала подключите Telegram',
   'Not a PDF file': 'Это не PDF-файл',
+  'AI assistant is not configured': 'ИИ-помощник ещё не настроен на сервере (нет ANTHROPIC_API_KEY)',
+  'AI assistant is temporarily unavailable': 'ИИ-помощник временно недоступен, попробуйте позже',
+  'Too many questions, try again later': 'Слишком много вопросов, попробуйте через час',
   'Could not read the PDF': 'Не получилось прочитать PDF',
   'File is larger than 5 MB': 'Файл больше 5 МБ',
   'No Kaspi expenses found in this file': 'В файле не найдено расходов Kaspi. Это выписка Kaspi Gold?',
@@ -163,6 +166,10 @@ export const api = {
   updateTransaction: (id: number, data: Partial<TransactionInput>) =>
     request<Transaction>(`/api/transactions/${id}`, { method: 'PATCH', body: data }),
   deleteTransaction: (id: number) => request<void>(`/api/transactions/${id}`, { method: 'DELETE' }),
+
+  // AI assistant
+  assistantStatus: () => request<{ enabled: boolean }>('/api/assistant/status'),
+  ask: (question: string) => request<{ answer: string }>('/api/assistant', { method: 'POST', body: { question } }),
 
   // bank statement import: the PDF is sent as the request body
   importKaspi: (file: Blob) => request<ImportPreview>('/api/import/kaspi', { method: 'POST', file }),
