@@ -52,7 +52,7 @@ export function AssistantPage() {
         </div>
       </div>
       {status.data && !status.data.enabled && (
-        <Alert kind="warning">ИИ-помощник ещё не настроен на сервере: нужен ANTHROPIC_API_KEY.</Alert>
+        <Alert kind="warning">ИИ-помощник ещё не настроен на сервере: нужен GEMINI_API_KEY.</Alert>
       )}
 
       <section className="section chat">

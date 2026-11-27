@@ -1,10 +1,13 @@
-"""AI assistant: answers questions about the family budget with Claude.
+"""AI assistant: answers questions about the family budget with Gemini.
 
 Privacy: the model only gets what this user can already see in the app: the family monthly
 report (totals per category, limits), the comparison with last month, and the user's OWN
 expenses as date + category + amount. No emails, no notes, no other people's expenses."""
 import logging
+import json
 import time
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from collections import defaultdict, deque
 from datetime import date, timedelta
 from decimal import Decimal
@@ -18,7 +21,7 @@ from .utils import month_range
 
 log = logging.getLogger(__name__)
 
-MODEL = "claude-opus-5-5"
+MODEL = "gemini-3.5-flash"
 MAX_QUESTIONS_PER_HOUR = 20
 
 INSTRUCTIONS = """Ты финансовый помощник в приложении Family Budget Tracker (семейный бюджет, Казахстан, суммы в тенге ₸).
@@ -72,32 +75,31 @@ def build_context(db: Session, user: models.User, today: date | None = None) -> 
     return "\n".join(lines)
 
 
-def call_claude(system: str, question: str) -> str:
+def call_gemini(system: str, question: str) -> str:
     """The only place that talks to the API. Tests replace it."""
-    if not config.ANTHROPIC_API_KEY:
+    if not config.GEMINI_API_KEY:
         raise AssistantUnavailable("not configured")
-    import anthropic  # only this feature needs the SDK
-
-    client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY, timeout=60.0)
+    payload = json.dumps({
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": question}]}],
+        "generationConfig": {"maxOutputTokens": 1024},
+    }).encode("utf-8")
+    request = Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent",
+        data=payload,
+        headers={"Content-Type": "application/json", "x-goog-api-key": config.GEMINI_API_KEY},
+        method="POST",
+    )
     try:
-        response = client.beta.messages.create(
-            model=MODEL,
-            max_tokens=16000,
-            output_config={"effort": "low"},  # short chat answers
-            # if the model declines, the API retries on a fallback model inside the same call
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-            system=system,
-            messages=[{"role": "user", "content": question}],
-        )
-    except anthropic.RateLimitError:
-        raise AssistantUnavailable("busy")
-    except (anthropic.APIStatusError, anthropic.APIConnectionError):
-        log.exception("Claude API call failed")
-        raise AssistantUnavailable("error")
-    if response.stop_reason == "refusal":
-        return "Я не могу ответить на этот вопрос. Спросите, пожалуйста, что-нибудь про ваш бюджет."
-    text = "".join(b.text for b in response.content if b.type == "text").strip()
+        with urlopen(request, timeout=60) as response:
+            result = json.load(response)
+    except (HTTPError, URLError, TimeoutError) as exc:
+        log.warning("Gemini API call failed: %s", getattr(exc, "code", type(exc).__name__))
+        raise AssistantUnavailable("error") from exc
+    try:
+        text = "".join(part.get("text", "") for part in result["candidates"][0]["content"]["parts"]).strip()
+    except (KeyError, IndexError, TypeError):
+        text = ""
     return text or "Не получилось сформулировать ответ, попробуйте переформулировать вопрос."
 
 
@@ -118,4 +120,4 @@ def allow(user_id: int, now: float | None = None) -> bool:
 
 def ask(db: Session, user: models.User, question: str) -> str:
     system = f"{INSTRUCTIONS}\n\nДанные:\n{build_context(db, user)}"
-    return call_claude(system, question)
+    return call_gemini(system, question)

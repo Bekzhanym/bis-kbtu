@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
 @router.get("/status")
 def status(_: models.User = Depends(get_current_user)):
-    return {"enabled": bool(config.ANTHROPIC_API_KEY)}
+    return {"enabled": bool(config.GEMINI_API_KEY)}
 
 
 @router.post("", response_model=schemas.AssistantOut)

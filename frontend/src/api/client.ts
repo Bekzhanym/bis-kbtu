@@ -56,7 +56,7 @@ const MESSAGES: Record<string, string> = {
   'Telegram bot is not configured': 'Telegram-бот ещё не настроен на сервере',
   'Telegram is not linked': 'Сначала подключите Telegram',
   'Not a PDF file': 'Это не PDF-файл',
-  'AI assistant is not configured': 'ИИ-помощник ещё не настроен на сервере (нет ANTHROPIC_API_KEY)',
+  'AI assistant is not configured': 'ИИ-помощник ещё не настроен на сервере (нет GEMINI_API_KEY)',
   'AI assistant is temporarily unavailable': 'ИИ-помощник временно недоступен, попробуйте позже',
   'Too many questions, try again later': 'Слишком много вопросов, попробуйте через час',
   'Could not read the PDF': 'Не получилось прочитать PDF',

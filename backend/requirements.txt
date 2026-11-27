@@ -4,4 +4,3 @@ sqlalchemy>=2.0
 pydantic[email]>=2.7
 pyjwt>=2.8
 pypdf>=5.0
-anthropic>=2.0

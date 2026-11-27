@@ -449,14 +449,14 @@ def test_kaspi_import_needs_auth_and_limits_size(client, member):
 # ---------- AI assistant (24B032010) ----------
 @pytest.fixture()
 def ai(monkeypatch):
-    """Claude call captured instead of sent."""
+    """Gemini call captured instead of sent."""
     from app import assistant
     calls = []
 
     def fake(system, question):
         calls.append((system, question))
         return "Перерасход по Food: 10 000 ₸."
-    monkeypatch.setattr(assistant, "call_claude", fake)
+    monkeypatch.setattr(assistant, "call_gemini", fake)
     assistant._recent.clear()
     return calls
 
@@ -484,36 +484,35 @@ def test_assistant_validation_and_rate_limit(client, member, ai):
 def test_assistant_without_key_is_off(client, member, monkeypatch):
     from app import assistant
     from app.core import config
-    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "")
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "")
     assistant._recent.clear()
     assert client.get("/api/assistant/status", headers=member).json() == {"enabled": False}
     r = client.post("/api/assistant", json={"question": "Сколько осталось?"}, headers=member)
     assert r.status_code == 503
 
 
-def test_call_claude_request_shape_and_refusal(monkeypatch):
-    from types import SimpleNamespace
-
-    import anthropic
-
+def test_call_gemini_request_shape_and_empty_response(monkeypatch):
+    import json
+    from io import BytesIO
     from app import assistant
     from app.core import config
+
     sent = {}
-    reply = {"stop_reason": "end_turn"}
+    reply = {"candidates": [{"content": {"parts": [{"text": " Ответ "}]}}]}
 
-    class FakeClient:
-        def __init__(self, **kw):
-            self.beta = SimpleNamespace(messages=SimpleNamespace(create=self.create))
+    def fake_urlopen(request, timeout):
+        sent["url"] = request.full_url
+        sent["key"] = request.get_header("X-goog-api-key")
+        sent["body"] = json.loads(request.data)
+        sent["timeout"] = timeout
+        return BytesIO(json.dumps(reply).encode())
 
-        def create(self, **kw):
-            sent.update(kw)
-            return SimpleNamespace(stop_reason=reply["stop_reason"],
-                                   content=[SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text=" Ответ ")])
-    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "test-key")
-    monkeypatch.setattr(anthropic, "Anthropic", FakeClient)
-    assert assistant.call_claude("SYS", "Q") == "Ответ"
-    assert sent["model"] == "claude-opus-5-5" and sent["fallbacks"] == "default"
-    assert sent["betas"] == ["server-side-fallback-2026-07-01"] and sent["system"] == "SYS"
-    assert "thinking" not in sent  # always on for this model; sending "disabled" would be a 400
-    reply["stop_reason"] = "refusal"
-    assert "не могу ответить" in assistant.call_claude("SYS", "Q")
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(assistant, "urlopen", fake_urlopen)
+    assert assistant.call_gemini("SYS", "Q") == "Ответ"
+    assert sent["url"].endswith("/models/gemini-3.5-flash:generateContent")
+    assert sent["key"] == "test-key" and sent["timeout"] == 60
+    assert sent["body"]["systemInstruction"]["parts"][0]["text"] == "SYS"
+    assert sent["body"]["contents"][0]["parts"][0]["text"] == "Q"
+    reply.clear()
+    assert "Не получилось" in assistant.call_gemini("SYS", "Q")
